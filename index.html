@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eğitici Oyun</title>
+
+    <!-- Google Fonts: Baloo 2 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS (CDN üzerinden) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind ayarları: Renkler ve Fontları Özelleştirelim -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Baloo 2"', 'sans-serif'],
+                    },
+                    colors: {
+                        pastelPurple: '#CDB4DB',
+                        pastelPink: '#FFC8DD',
+                        pastelPinkDark: '#FFAFCC',
+                        pastelBlue: '#BDE0FE',
+                        pastelBlueDark: '#A2D2FF',
+                        pastelYellow: '#FEFAE0',
+                        pastelBg: '#FDF8F5'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Özelleştirilmiş Buton Hover & Click Efektleri için */
+        .chick-animate {
+            animation: bounce-chick 2s infinite ease-in-out;
+        }
+
+        @keyframes bounce-chick {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) translateY(0);
+            }
+
+            50% {
+                transform: translate(-50%, -50%) translateY(-10px);
+            }
+        }
+
+        /* Tema Arka Planları */
+        .bg-yardimlasma-pattern {
+            background-color: #FDF8F5;
+            /* 🦸‍♂️, 👨‍⚕️, 👩‍⚕️, 🏥 */
+            background-image: url("data:image/svg+xml,%3Csvg width='350' height='350' viewBox='0 0 350 350' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='40' y='60' font-size='28' opacity='0.2'%3E🦸‍♂️%3C/text%3E%3Ctext x='200' y='120' font-size='32' opacity='0.2'%3E👨‍⚕️%3C/text%3E%3Ctext x='100' y='240' font-size='28' opacity='0.2'%3E🏥%3C/text%3E%3Ctext x='250' y='280' font-size='32' opacity='0.2'%3E👩‍⚕️%3C/text%3E%3C/svg%3E");
+            background-size: 350px 350px;
+            background-repeat: repeat;
+        }
+
+        .bg-paylasma-pattern {
+            background-color: #FEFAE0;
+            /* Maske, Sabun, Mikrop (Görünmez Kalkanım) */
+            background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='30' y='70' font-size='28' opacity='0.2'%3E😷%3C/text%3E%3Ctext x='190' y='100' font-size='32' opacity='0.2'%3E🧼%3C/text%3E%3Ctext x='120' y='230' font-size='24' opacity='0.2'%3E🦠%3C/text%3E%3C/svg%3E");
+            background-size: 300px 300px;
+            background-repeat: repeat;
+        }
+
+        .bg-gonulluluk-pattern {
+            background-color: #D8F3DC;
+            /* Kan Damlası, Kalp, Gülümseme (Kan Fabrikam) */
+            background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50' y='50' font-size='28' opacity='0.2'%3E🩸%3C/text%3E%3Ctext x='220' y='130' font-size='32' opacity='0.2'%3E💖%3C/text%3E%3Ctext x='80' y='250' font-size='24' opacity='0.2'%3E😊%3C/text%3E%3C/svg%3E");
+            background-size: 300px 300px;
+            background-repeat: repeat;
+        }
+
+        .bg-saglik-pattern {
+            background-color: #E0F4FF;
+            /* Serum, Hap, Su Damlası (Süper İksirlerim) */
+            background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='40' y='60' font-size='28' opacity='0.2'%3E💧%3C/text%3E%3Ctext x='200' y='120' font-size='32' opacity='0.2'%3E💊%3C/text%3E%3Ctext x='100' y='240' font-size='24' opacity='0.2'%3E🧪%3C/text%3E%3C/svg%3E");
+            background-size: 300px 300px;
+            background-repeat: repeat;
+        }
+
+        .bg-beslenme-pattern {
+            background-color: #FFE5D9;
+            /* Pastel Şeftali bg */
+            background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='35' y='65' font-size='28' opacity='0.2'%3E🍎%3C/text%3E%3Ctext x='210' y='110' font-size='32' opacity='0.2'%3E🥦%3C/text%3E%3Ctext x='90' y='260' font-size='24' opacity='0.2'%3E🥛%3C/text%3E%3C/svg%3E");
+            background-size: 300px 300px;
+            background-repeat: repeat;
+        }
+
+        .bg-uyku-pattern {
+            background-color: #E8DFF5;
+            /* Pastel Gece/Lila bg */
+            background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='60' y='70' font-size='32' opacity='0.2'%3E🛏️%3C/text%3E%3Ctext x='180' y='140' font-size='32' opacity='0.2'%3E🌙%3C/text%3E%3Ctext x='110' y='220' font-size='24' opacity='0.2'%3E💤%3C/text%3E%3C/svg%3E");
+            background-size: 300px 300px;
+            background-repeat: repeat;
+        }
+
+        .bg-digital-pattern {
+            background-color: #1E1B4B;
+            /* Koyu lacivert/mor taban (Dark Mode Uzay Odam) */
+            background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='40' y='60' font-size='28' opacity='0.4'%3E🚀%3C/text%3E%3Ctext x='200' y='120' font-size='32' opacity='0.4'%3E🧑‍🚀%3C/text%3E%3Ctext x='100' y='240' font-size='24' opacity='0.4'%3E⭐%3C/text%3E%3C/svg%3E");
+            background-size: 300px 300px;
+            background-repeat: repeat;
+        }
+
+        /* Zigzag Çizgi için SVG/CSS desteği */
+        .zigzag-path {
+            position: absolute;
+            width: 8px;
+            background-color: #A2D2FF;
+            z-index: 0;
+            border-radius: 10px;
+        }
+
+        /* Eşleştirme CSS */
+        .match-btn.selected {
+            border-color: #A2D2FF;
+            box-shadow: 0 0 0 4px #A2D2FF;
+            transform: scale(1.05);
+        }
+
+        .match-btn.matched {
+            background-color: #D8F3DC;
+            border-color: #95D5B2;
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: scale(0.95);
+        }
+
+        /* Özel Kaydırma Çubuğu (Scrollbar) */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 16px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            margin: 0 40px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            background-clip: padding-box;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        /* Koyu Tema Scrollbar (Açık temalar için belirgin olması adına siyah) */
+        .custom-scrollbar-dark::-webkit-scrollbar {
+            height: 16px;
+        }
+
+        .custom-scrollbar-dark::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            /* Yarı saydam siyah track */
+            border-radius: 12px;
+            margin: 0 40px;
+        }
+
+        .custom-scrollbar-dark::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.25);
+            /* Siyah scroll bar rengi */
+            border-radius: 12px;
+            border: 4px solid rgba(0, 0, 0, 0.05);
+            background-clip: padding-box;
+        }
+
+        .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Uçan Yıldız Animasyonu */
+        @keyframes starFly {
+            0% {
+                transform: translate(0, 0) scale(0.5) rotate(0deg);
+                opacity: 0;
+            }
+
+            20% {
+                transform: translate(0, -30px) scale(1.5) rotate(45deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(1) rotate(360deg);
+                opacity: 1;
+            }
+        }
+
+        .animate-flying-star {
+            animation: starFly 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gradient-to-br from-pastelBlue via-pastelBg to-pastelPink h-screen flex flex-col items-center overflow-hidden relative">
+
+    <!-- Ayarlar Butonu (Sağ Üst Köşe Sabit) -->
+    <button onclick="openSettings()"
+        class="absolute top-6 right-6 z-[100] bg-white border-4 border-gray-200 p-3 rounded-full text-3xl hover:bg-gray-50 transition-colors shadow-lg active:scale-95">
+        ⚙️
+    </button>
+
+    <!-- Header Bölümü -->
+    <header
+        class="w-full max-w-md p-6 bg-white/80 backdrop-blur-sm rounded-b-[40px] shadow-sm flex justify-between items-center border-b-4 border-pastelBlueDark relative z-50">
+        <div class="flex items-center gap-4">
+            <div class="relative cursor-pointer hover:scale-105 transition-transform" onclick="showHome()">
+                <!-- Avatar Çemberi -->
+                <div id="hero-avatar"
+                    class="w-16 h-16 rounded-full bg-pastelBlue flex items-center justify-center text-3xl border-4 border-white shadow-md">
+                    🧒
+                </div>
+            </div>
+            <h1 class="text-xl font-extrabold text-gray-700 leading-tight">Selam <br> <span class="text-blue-500">Süper
+                    Kahraman!</span></h1>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <div
+                class="flex items-center bg-pastelYellow px-4 py-2 rounded-full border-4 border-pastelPinkDark shadow-sm hover:scale-105 transition-transform relative">
+                <span class="text-2xl mr-2 relative z-10">⭐</span>
+                <span id="star-count" class="text-xl font-extrabold text-gray-800">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Ana Konteyner -->
+    <main class="w-full flex-1 flex flex-col relative overflow-hidden py-4">
+
+        <!-- Ana Ekran (Dairesel Menü) -->
+        <div id="home-view" class="flex-1 flex flex-col items-center justify-center w-full relative max-w-md mx-auto">
+            <h2
+                class="text-3xl font-extrabold text-center text-gray-700 mb-8 z-20 bg-white/60 px-6 py-2 rounded-full shadow-sm">
+                Bir Görev Seç!</h2>
+
+            <div id="circle-container" class="relative w-[380px] h-[380px] flex items-center justify-center mb-6">
+                <!-- Civciv -->
+                <div id="chick-character"
+                    class="chick-animate absolute w-32 h-32 bg-white rounded-full text-[5rem] flex items-center justify-center shadow-lg z-20 border-4 border-pastelYellow"
+                    style="left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                    🐥
+                </div>
+                <!-- Butonlar JavaScript ile eklenecek -->
+            </div>
+        </div>
+
+        <!-- Tema Yol Haritası (Yatay Scroll) -->
+        <div id="theme-view" class="hidden flex-1 flex-col items-center w-full overflow-hidden">
+            <!-- Header bar for the theme map, keep it centered with max width -->
+            <div class="w-full max-w-screen-xl flex justify-between items-center mb-6 mt-2 px-6">
+                <button onclick="showHome()"
+                    class="bg-white border-4 border-pastelBlueDark px-4 py-2 rounded-full font-bold text-gray-700 shadow-sm active:scale-95">◀
+                    Geri</button>
+                <h2 id="theme-title"
+                    class="text-2xl font-extrabold text-center text-gray-700 bg-white/80 px-4 py-1 rounded-full">Tema
+                    Adı</h2>
+                <div class="w-[84px]"></div> <!-- Boşluk dengeleyici -->
+            </div>
+
+            <!-- Yatay Taşıyıcı / Map - Ekranı Tamamen Kaplasın -->
+            <div id="map-scroll-container"
+                class="w-full flex-1 overflow-x-auto overflow-y-hidden flex flex-col justify-center px-10 pb-4 relative snap-x scroll-smooth custom-scrollbar">
+                <!-- flex-1 ve w-max vererek içeriğin tüm sayfaya yayılmasını sağlar -->
+                <div id="map-container"
+                    class="flex items-center justify-between mx-auto gap-28 relative w-max md:min-w-full px-10 h-[60vh]">
+                    <!-- Yatay Ana Çizgi (SVG ile JS'ten eklenecek veya opsiyonel arkaplan) -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz / Oyun Görünümü -->
+        <div id="quiz-view" class="hidden w-full max-w-md mx-auto flex-1 flex flex-col">
+            <div class="flex justify-between items-center mb-6 px-4">
+                <button onclick="showThemeMap(currentThemeId)"
+                    class="bg-white border-4 border-pastelBlueDark px-4 py-2 rounded-full font-bold text-gray-700 shadow-sm active:scale-95">◀
+                    Harita</button>
+                <h2 class="text-xl font-bold text-gray-600 bg-white px-4 py-1 rounded-full border-2 border-gray-200">
+                    Bölüm <span id="level-indicator">1</span></h2>
+            </div>
+
+            <div
+                class="bg-white rounded-3xl p-6 shadow-md border-4 border-pastelBlueDark flex-1 flex flex-col items-center justify-center relative overflow-hidden">
+                <h3 id="question-text" class="text-2xl font-extrabold text-gray-700 text-center mb-8 z-10">Soru Metni
+                    Konteynırı</h3>
+                <div id="options-container" class="w-full flex flex-col gap-4 z-10">
+                    <!-- Seçenekler JS ile dolacak -->
+                </div>
+                <!-- Eşleştirme Oyunu Containerı -->
+                <div id="matching-container"
+                    class="hidden w-full h-full flex flex-row gap-4 justify-between z-10 px-2 mt-4">
+                    <div id="match-left" class="flex flex-col gap-4 w-1/2"></div>
+                    <div id="match-right" class="flex flex-col gap-4 w-1/2"></div>
+                </div>
+
+                <!-- Sürükle Bırak Gruplama (Sorting) Oyunu -->
+                <div id="sorting-container" class="hidden w-full h-full flex flex-col z-10 px-2 mt-2 gap-4">
+                    <!-- Sürüklenebilir Öğeler Sepeti (Draggables) -->
+                    <div id="sorting-items"
+                        class="flex flex-wrap items-center justify-center gap-4 min-h-[100px] mb-2 p-4 bg-white/50 border-4 border-dashed border-gray-200 rounded-3xl">
+                        <!-- JS ile dolacak -->
+                    </div>
+
+                    <!-- Hedef Kutular (Dropzones) -->
+                    <div class="flex flex-row justify-between w-full h-full gap-4 mt-auto">
+                        <div id="dropzone-healthy"
+                            class="w-1/2 flex flex-col items-center bg-blue-50 border-4 border-blue-300 rounded-[30px] p-4 relative overflow-hidden transition-all">
+                            <h3 id="dropzone-left-title"
+                                class="font-extrabold text-blue-700 text-sm sm:text-lg mb-2 text-center w-full bg-white/70 rounded-full py-1">
+                                Kategori 1</h3>
+                            <div
+                                class="drop-content flex flex-wrap gap-2 justify-center w-full h-full content-start mt-2">
+                            </div>
+                        </div>
+                        <div id="dropzone-unhealthy"
+                            class="w-1/2 flex flex-col items-center bg-purple-50 border-4 border-purple-300 rounded-[30px] p-4 relative overflow-hidden transition-all">
+                            <h3 id="dropzone-right-title"
+                                class="font-extrabold text-purple-700 text-sm sm:text-lg mb-2 text-center w-full bg-white/70 rounded-full py-1">
+                                Kategori 2</h3>
+                            <div
+                                class="drop-content flex flex-wrap gap-2 justify-center w-full h-full content-start mt-2">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal (Popup) -->
+    <div id="modal-overlay"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden items-center justify-center z-[100] transition-opacity duration-300 opacity-0">
+        <div id="modal-box"
+            class="bg-white w-11/12 max-w-sm rounded-[40px] p-8 flex flex-col items-center shadow-2xl transform scale-50 transition-transform duration-300 border-8 border-white relative">
+            <div id="modal-emoji" class="text-7xl mb-4 drop-shadow-md">🎉</div>
+            <h2 id="modal-title" class="text-3xl font-extrabold text-gray-800 mb-2 text-center">Tebrikler!</h2>
+            <div id="modal-desc" class="text-lg text-gray-600 text-center font-medium mb-6 w-full">Harika bir iş
+                çıkardın.</div>
+            <button id="modal-btn"
+                class="w-full py-4 text-2xl font-extrabold rounded-full bg-pastelYellow border-4 border-pastelPinkDark text-gray-800 shadow-md active:scale-95 transition-transform">Devam
+                Et</button>
+        </div>
+    </div>
+
+    <!-- Ayarlar / İlk Giriş Modalı -->
+    <div id="settings-modal"
+        class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm hidden flex-col items-center justify-center z-[110] transition-opacity">
+        <div
+            class="bg-white w-11/12 max-w-sm rounded-[40px] p-8 flex flex-col items-center shadow-2xl border-8 border-pastelBlueDark relative">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-6 text-center" id="settings-title">Ayarlar ⚙️</h2>
+            <p id="settings-desc" class="text-center text-gray-500 mb-6 font-bold hidden">Maceraya başlamadan önce
+                kahramanını hazırla!</p>
+
+            <div class="w-full mb-6">
+                <h3 class="font-extrabold text-gray-600 mb-3 text-center">Kahramanını Seç:</h3>
+                <div class="flex gap-6 justify-center">
+                    <button
+                        class="avatar-option w-20 h-20 rounded-full bg-pastelBlue text-4xl border-4 border-gray-200 outline-none hover:scale-110 transition-transform shadow-sm"
+                        data-avatar="🧒" data-bg="bg-pastelBlue"
+                        onclick="selectAvatar('🧒', 'bg-pastelBlue')">🧒</button>
+                    <button
+                        class="avatar-option w-20 h-20 rounded-full bg-pastelPink text-4xl border-4 border-gray-200 outline-none hover:scale-110 transition-transform shadow-sm"
+                        data-avatar="👧" data-bg="bg-pastelPink"
+                        onclick="selectAvatar('👧', 'bg-pastelPink')">👧</button>
+                </div>
+            </div>
+
+            <div class="w-full mb-6">
+                <h3 class="font-extrabold text-gray-600 mb-3 text-center">Civcivin Rengini Seç:</h3>
+                <div class="flex gap-6 justify-center flex-wrap">
+                    <button
+                        class="chick-option flex items-center justify-center w-16 h-16 rounded-full bg-white text-4xl border-4 border-gray-200 hover:scale-110 transition-transform shadow-sm"
+                        data-cbg="hue-rotate(0deg)" onclick="selectChickBg('hue-rotate(0deg)')"
+                        style="filter: hue-rotate(0deg);">🐥</button>
+                    <button
+                        class="chick-option flex items-center justify-center w-16 h-16 rounded-full bg-white text-4xl border-4 border-gray-200 hover:scale-110 transition-transform shadow-sm"
+                        data-cbg="hue-rotate(180deg)" onclick="selectChickBg('hue-rotate(180deg)')"
+                        style="filter: hue-rotate(180deg);">🐥</button>
+                    <button
+                        class="chick-option flex items-center justify-center w-16 h-16 rounded-full bg-white text-4xl border-4 border-gray-200 hover:scale-110 transition-transform shadow-sm"
+                        data-cbg="hue-rotate(300deg)" onclick="selectChickBg('hue-rotate(300deg)')"
+                        style="filter: hue-rotate(300deg);">🐥</button>
+                </div>
+            </div>
+
+            <!-- Ses Ayarı -->
+            <div
+                class="w-full mb-8 flex justify-between items-center bg-gray-50 p-4 rounded-2xl border-2 border-gray-200">
+                <h3 class="font-extrabold text-gray-600">Ses Efektleri:</h3>
+                <button id="sound-toggle-btn" class="text-3xl hover:scale-110 transition-transform"
+                    onclick="toggleSound()">🔊</button>
+            </div>
+
+            <button onclick="saveAndCloseSettings()"
+                class="w-full py-4 text-2xl font-extrabold rounded-full bg-green-400 text-white shadow-md active:scale-95 transition-transform border-4 border-green-500">
+                Kaydet & Başla! 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Dosyalarının Eklenmesi -->
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
