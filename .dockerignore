@@ -1,0 +1,19 @@
+# Git dosyaları
+.git
+.gitignore
+
+# Docker dosyaları
+Dockerfile
+.dockerignore
+
+# Mac OS gizli dosyaları
+.DS_Store
+
+# IDE ayarları
+.vscode
+.idea
+
+# Node modülleri (Projede kullanmıyorsunuz ama adet yerini bulsun)
+node_modules
+npm-debug.log
+yarn-error.log

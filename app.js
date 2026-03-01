@@ -6,6 +6,7 @@ const defaultProgress = {
     avatarBg: 'bg-pastelBlue',
     chickHue: 'hue-rotate(0deg)',
     soundEnabled: true,
+    ageGroup: null, // '2-5', '6-8', '9+'
     themes: JSON.parse(JSON.stringify(themesData))
 };
 
@@ -71,8 +72,8 @@ function initProgress() {
         saveProgress();
     }
 
-    if (!userProgress.avatar || userProgress.avatar === null) {
-        // İlk defa giriyorsa veya avatar yoksa ayarları zorunlu aç
+    if (!userProgress.avatar || userProgress.avatar === null || !userProgress.ageGroup) {
+        // İlk defa giriyorsa veya avatar/yaş seçilmemişse ayarları zorunlu aç
         openSettings(true);
     } else {
         updateUI();
@@ -125,6 +126,7 @@ function openSettings(isFirstTime = false) {
         tempSettings.avatarBg = userProgress.avatarBg;
         tempSettings.chickHue = userProgress.chickHue || 'hue-rotate(0deg)';
         tempSettings.soundEnabled = userProgress.soundEnabled !== false;
+        tempSettings.ageGroup = userProgress.ageGroup || null;
     } else {
         // İlk çalışmada desc metnini göster
         document.getElementById('settings-desc').classList.remove('hidden');
@@ -142,6 +144,11 @@ function openSettings(isFirstTime = false) {
 function selectAvatar(avatar, bgClass) {
     tempSettings.avatar = avatar;
     tempSettings.avatarBg = bgClass;
+    updateSettingsUI();
+}
+
+function selectAge(age) {
+    tempSettings.ageGroup = age;
     updateSettingsUI();
 }
 
@@ -178,6 +185,17 @@ function updateSettingsUI() {
         }
     });
 
+    // Yaş Seçimi borderlarını güncelle
+    document.querySelectorAll('.age-option').forEach(btn => {
+        if (btn.dataset.age === tempSettings.ageGroup) {
+            btn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700', 'scale-105');
+            btn.classList.remove('border-gray-200', 'bg-white', 'text-gray-700');
+        } else {
+            btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700', 'scale-105');
+            btn.classList.add('border-gray-200', 'bg-white', 'text-gray-700');
+        }
+    });
+
     // Ses Butonu Güncelle
     const soundBtn = document.getElementById('sound-toggle-btn');
     if (soundBtn) {
@@ -196,11 +214,18 @@ function updateSettingsUI() {
 function saveAndCloseSettings() {
     const modal = document.getElementById('settings-modal');
 
+    // Kaydetmek için önce validasyon yap
+    if (!tempSettings.avatar || !tempSettings.ageGroup) {
+        alert("Lütfen bir kahraman ve yaş grubu seçin! 🦸‍♀️");
+        return;
+    }
+
     // Kaydet
     userProgress.avatar = tempSettings.avatar;
     userProgress.avatarBg = tempSettings.avatarBg;
-    userProgress.chickHue = tempSettings.chickHue;
-    userProgress.soundEnabled = tempSettings.soundEnabled;
+    userProgress.chickHue = tempSettings.chickHue || 'hue-rotate(0deg)';
+    userProgress.soundEnabled = tempSettings.soundEnabled !== false;
+    userProgress.ageGroup = tempSettings.ageGroup;
     saveProgress();
     updateUI();
 
@@ -514,6 +539,19 @@ function drawHorizontalZigzagLine(parentNode, isTopToBottom, isCompleted) {
 // ----------------------------------------------------
 let matchingState = { selectedLeft: null, selectedRight: null, matchedCount: 0, totalPairs: 0 };
 
+// Helper for Dynamic Age Content
+function getAgeSpecificContent(level) {
+    let contentKey = 'content_2_5'; // default
+    if (userProgress.ageGroup === '6-8') contentKey = 'content_6_8';
+    if (userProgress.ageGroup === '9+') contentKey = 'content_9_plus';
+
+    // Geçiş dönemi: Eski veri yapısı gelirse veya o yaş grubuna özel veri yoksa mevcutu döndür
+    if (!level[contentKey]) return level;
+
+    // Kilit durumu ve temel bilgileri yaş grubu içeriğiyle birleştirip düzleştir (flatten)
+    return { ...level, ...level[contentKey] };
+}
+
 function showQuiz(themeId, levelId) {
     currentThemeId = themeId;
     currentLevelId = levelId;
@@ -523,7 +561,10 @@ function showQuiz(themeId, levelId) {
     quizView.classList.add('flex');
 
     const theme = userProgress.themes.find(t => t.id === themeId);
-    const level = theme.levels.find(l => String(l.id) === String(levelId));
+    const baseLevel = theme.levels.find(l => String(l.id) === String(levelId));
+
+    // Kullanıcının seçtiği yaş grubuna göre düzleştirilmiş seviye verisini al
+    const level = getAgeSpecificContent(baseLevel);
 
     document.getElementById('level-indicator').textContent = levelId;
 
@@ -533,21 +574,28 @@ function showQuiz(themeId, levelId) {
 
     optionsContainer.innerHTML = '';
 
+    // 2-5 yaş için soru metni gösterilmez. Sadece görseller.
+    if (userProgress.ageGroup === '2-5') {
+        questionTitle.classList.add('hidden');
+    } else {
+        questionTitle.classList.remove('hidden');
+    }
+
     if (level.gameType === 'matching') {
-        questionTitle.textContent = "Eşleştirme Zamanı!";
+        if (userProgress.ageGroup !== '2-5') questionTitle.textContent = level.question || "Eşleştirme Zamanı!";
         optionsContainer.classList.add('hidden');
         document.getElementById('sorting-container').classList.add('hidden');
         matchingContainer.classList.remove('hidden');
         renderMatchingGame(level);
     } else if (level.gameType === 'sorting') {
-        questionTitle.textContent = level.question;
+        if (userProgress.ageGroup !== '2-5') questionTitle.textContent = level.question;
         optionsContainer.classList.add('hidden');
         matchingContainer.classList.add('hidden');
         const sortingContainer = document.getElementById('sorting-container');
         if (sortingContainer) sortingContainer.classList.remove('hidden');
         renderSortingGame(level);
     } else {
-        questionTitle.textContent = level.question;
+        if (userProgress.ageGroup !== '2-5') questionTitle.textContent = level.question;
         matchingContainer.classList.add('hidden');
         document.getElementById('sorting-container').classList.add('hidden');
         optionsContainer.classList.remove('hidden');
@@ -564,13 +612,18 @@ function renderQuizGame(level, container) {
 
     level.options.forEach(opt => {
         const btn = document.createElement('button');
-        // Hem dev ikon hem de okuyabilenler için kısa net bir font
-        btn.className = 'w-full bg-white border-8 border-gray-100 rounded-[30px] p-4 shadow-sm hover:border-pastelBlue hover:scale-[1.02] transition-all flex items-center justify-start gap-6 active:scale-95 text-left';
-
-        btn.innerHTML = `
-            <span class="text-[4rem] sm:text-[5rem] drop-shadow-md shrink-0 bg-pastelBg rounded-3xl p-2">${opt.image}</span>
-            <span class="text-2xl sm:text-3xl font-extrabold text-gray-700 leading-tight">${opt.text}</span>
-        `;
+        // Eğer veri tabanından text gelmediyse (Örn: 2-5 Yaş Grubu seçimi) sadece Emoji/İkon dev boyutta basılacak.
+        if (!opt.text) {
+            btn.className = 'w-full h-auto min-h-[160px] bg-white border-8 border-gray-100 rounded-[30px] p-4 shadow-sm hover:border-pastelBlue hover:scale-[1.02] transition-all flex items-center justify-center active:scale-95';
+            btn.innerHTML = `<span class="text-[6rem] sm:text-[8rem] drop-shadow-md bg-pastelBg rounded-3xl p-6">${opt.image}</span>`;
+        } else {
+            // Hibrit ve 9+ yaş için klasik Icon + Text düzeni
+            btn.className = 'w-full bg-white border-8 border-gray-100 rounded-[30px] p-4 shadow-sm hover:border-pastelBlue hover:scale-[1.02] transition-all flex items-center justify-start gap-6 active:scale-95 text-left';
+            btn.innerHTML = `
+                <span class="text-[4rem] sm:text-[5rem] drop-shadow-md shrink-0 bg-pastelBg rounded-3xl p-2">${opt.image}</span>
+                <span class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-700 leading-tight">${opt.text}</span>
+            `;
+        }
 
         btn.onclick = () => {
             handleAnswer(opt.isCorrect, false);
@@ -611,7 +664,7 @@ function renderMatchingGame(level) {
     rightItems.forEach(item => {
         const btn = document.createElement('button');
         // Hibrit Yaş (2-10): Metinler geri geldi, okunaklı, kalın ve kısa
-        btn.className = 'match-btn w-full min-h-[100px] bg-white border-4 border-gray-200 font-extrabold text-gray-700 rounded-2xl shadow-sm transition-all flex items-center justify-center text-center leading-snug p-3 text-xl sm:text-2xl';
+        btn.className = 'match-btn w-full min-h-[100px] h-auto bg-white border-4 border-gray-200 font-extrabold text-gray-700 rounded-2xl shadow-sm transition-all flex items-center justify-center text-center leading-snug p-3 text-lg sm:text-2xl break-words whitespace-normal';
         btn.textContent = item.name;
         btn.dataset.id = item.id;
         btn.onclick = () => handleMatchClick('right', btn, item.id);
@@ -762,8 +815,19 @@ function renderSortingGame(level) {
     const rightTitle = document.getElementById('dropzone-right-title');
 
     // Dinamik başlık atama (data.js üzerinden gelecek)
-    if (leftTitle && level.dropzones && level.dropzones.left) leftTitle.textContent = level.dropzones.left.title;
-    if (rightTitle && level.dropzones && level.dropzones.right) rightTitle.textContent = level.dropzones.right.title;
+    if (userProgress.ageGroup === '2-5') {
+        if (leftTitle) leftTitle.classList.add('hidden');
+        if (rightTitle) rightTitle.classList.add('hidden');
+    } else {
+        if (leftTitle && level.dropzones && level.dropzones.left) {
+            leftTitle.classList.remove('hidden');
+            leftTitle.textContent = level.dropzones.left.title;
+        }
+        if (rightTitle && level.dropzones && level.dropzones.right) {
+            rightTitle.classList.remove('hidden');
+            rightTitle.textContent = level.dropzones.right.title;
+        }
+    }
 
     // Dropzone içerik kutularını al
     const leftContent = leftZone.querySelector('.drop-content');
@@ -784,12 +848,16 @@ function renderSortingGame(level) {
 
     randomItems.forEach(item => {
         const div = document.createElement('div');
-        div.className = 'text-5xl cursor-grab active:cursor-grabbing hover:scale-110 transition-transform bg-white/80 p-2 rounded-2xl shadow-sm border-2 border-gray-100 flex flex-col items-center justify-center';
+        div.className = 'w-24 sm:w-28 text-5xl cursor-grab active:cursor-grabbing hover:scale-110 transition-transform bg-white/80 p-2 rounded-2xl shadow-sm border-2 border-gray-100 flex flex-col items-center justify-center break-words';
         div.draggable = true;
         div.dataset.id = item.id;
         div.dataset.type = item.type; // 'healthy' or 'unhealthy'
 
-        div.innerHTML = `<span>${item.emoji}</span><span class="text-xs font-bold text-gray-500 mt-1">${item.name}</span>`;
+        const isToddler = userProgress.ageGroup === '2-5';
+        const nameSpanClass = isToddler ? 'hidden' : 'text-xs sm:text-sm font-bold text-gray-600 mt-1 text-center w-full leading-tight px-1 break-words';
+        const emojiSizeClass = isToddler ? 'text-7xl mb-2' : '';
+
+        div.innerHTML = `<span class="${emojiSizeClass}">${item.emoji}</span><span class="${nameSpanClass}">${item.name || ''}</span>`;
 
         // Drag Events (Masaüstü)
         div.ondragstart = (e) => {
@@ -951,92 +1019,19 @@ function handleAnswer(isCorrect, isMatchingGame = false) {
         unlockNextLevel();
         // Eşleştirme oyununun kendi özel tebrikler ekranı ve animasyon lojiği var renderMatchingGame içinde
         if (!isMatchingGame && (currentThemeId !== 7 || !currentLevelId.toString().startsWith('matching'))) {
-            let customTitle = 'Doğru Cevap!';
-            let customDesc = 'Harikasın, 1 Yıldız kazandın! ⭐';
-            let bgClass = 'bg-gray-50';
-            let borderClass = 'border-gray-200';
+            const theme = userProgress.themes.find(t => t.id === currentThemeId);
+            const baseLevel = theme.levels.find(l => String(l.id) === String(currentLevelId));
+            const level = getAgeSpecificContent(baseLevel);
 
-            // Temalara ve levellere göre özelleştirilmiş, zengin, pedagojik html mesajları
-            if (currentThemeId === 1 && currentLevelId === 1) { // Süper Ekip 1. Soru
-                customTitle = 'Süper Ekibini Tanıdın! 🦸‍♂️🦸‍♀️';
-                customDesc = 'Doktor ve hemşireler senin <b>süper kahraman takımındır!</b> Birlikte yenilmez bir ekipsiniz! 🤝';
-                bgClass = 'bg-blue-50';
-                borderClass = 'border-blue-200';
-            } else if (currentThemeId === 1 && currentLevelId === 3) { // Stetoskop
-                customTitle = 'Sihirli Aleti Bildin! 🩺';
-                customDesc = 'Stetoskop doktorların <b>süper kulaklığıdır!</b> Kalbinin "güm güm" atan kahramanlık sesini dinlerler. 🎵';
-                bgClass = 'bg-blue-50';
-                borderClass = 'border-blue-200';
-            } else if (currentThemeId === 2 && currentLevelId === 1) { // Maske
-                customTitle = 'Kalkanımız: Maske! 😷';
-                customDesc = 'Maskemiz, bizi görünmez yaramaz mikroplardan koruyan <b>en güçlü şövalye kalkanımızdır!</b> 🛡️';
-                bgClass = 'bg-orange-50';
-                borderClass = 'border-orange-200';
-            } else if (currentThemeId === 2 && currentLevelId === 2) { // Sabun
-                customTitle = 'Süper Kalkanlar Aktif! 🧼';
-                customDesc = 'Mis kokulu sabun, ellerimizi tertemiz yapar ve bizi <b>dokunulmaz süper kahramanlar</b> haline getirir! ✨';
-                bgClass = 'bg-orange-50';
-                borderClass = 'border-orange-200';
-            } else if (currentThemeId === 2 && currentLevelId === 3) { // Ziyaretçi
-                customTitle = 'Güvenli Alanımız! 🛡️';
-                customDesc = 'Maske takan ziyaretçiler, senin <b>kahramanlık seviyeni korumak</b> için oradalar. Bu senin kalen! 🏰';
-                bgClass = 'bg-orange-50';
-                borderClass = 'border-orange-200';
-            } else if (currentThemeId === 3 && currentLevelId === 2) { // Kan Tahlili
-                customTitle = 'Puan Tablosu! 🩸';
-                customDesc = 'Kan tahlili senin <b>kahramanlık puan tablon!</b> Ne kadar güçlendiğini görmek için alıyorlar. 💪';
-                bgClass = 'bg-red-50';
-                borderClass = 'border-red-200';
-            } else if (currentThemeId === 3 && currentLevelId === 3) { // Gülümsemek
-                customTitle = 'Gülümsemek En Büyük İlaç! 😊';
-                customDesc = 'İçindeki yeni kahraman hücreler, ilacın yanında <b>senin kahkahana</b> bayılır! Bol bol gülümse! 🎈';
-                bgClass = 'bg-red-50';
-                borderClass = 'border-red-200';
-            } else if (currentThemeId === 4 && currentLevelId === 1) { // Serum Giriş
-                customTitle = 'Süper İksirimiz! 💧';
-                customDesc = 'Serum, yaramaz hücreleri tatlı bir uykuya daldıran hızlı kahramanlık iksirimizdir! 🦸‍♂️';
-                bgClass = 'bg-cyan-50';
-                borderClass = 'border-cyan-200';
-            } else if (currentThemeId === 4 && currentLevelId === 2) { // Serum Devam
-                customTitle = 'Hızlı Enerji Kablosu! 🩸';
-                customDesc = 'Serum, yemek yemesek bile bize sıvı ve enerji taşıyan harika bir sihirli kablodur! ⚡';
-                bgClass = 'bg-cyan-50';
-                borderClass = 'border-cyan-200';
-            } else if (currentThemeId === 4 && currentLevelId === 3) { // Buton
-                customTitle = 'Yardım Butonu! 🚨';
-                customDesc = 'Bu düğme, koruyucu meleklerine (hemşirelere) sinyal gönderir. Çekinmeden basabilirsin! 🦸‍♀️';
-                bgClass = 'bg-cyan-50';
-                borderClass = 'border-cyan-200';
-            } else if (currentThemeId === 5 && currentLevelId === 2) { // Meyve
-                customTitle = 'Temiz Yakıt! 🚿';
-                customDesc = 'Bol suyla yıkanan meyveler, kahramanlık zırhını daha hızlı örmeni sağlar. Mis gibi yakıt! 🍏';
-                bgClass = 'bg-green-50';
-                borderClass = 'border-green-200';
-            } else if (currentThemeId === 5 && currentLevelId === 3) { // Ev Yemeği
-                customTitle = 'Sıcak Ev Yemeği! 🍲';
-                customDesc = 'Açık abur cuburlar kahraman arabanı yavaşlatır. Sicacık ev yemekleri seni uçurur! 🚀';
-                bgClass = 'bg-green-50';
-                borderClass = 'border-green-200';
-            } else if (currentThemeId === 6 && currentLevelId === 1) { // Uyku
-                customTitle = 'Şarj İstasyonuna Dönüş! 🛏️';
-                customDesc = 'Gözlerini kapat ve <b>şarj kapsülüne</b> gir! Yenilenmiş olarak uyanacaksın! 🔋';
-                bgClass = 'bg-purple-50';
-                borderClass = 'border-purple-200';
-            } else if (currentThemeId === 6 && currentLevelId === 2) { // Halsizlik
-                customTitle = 'Vücudumuz Savaşıyor! 😴';
-                customDesc = 'İlaçlar yaramazlarla savaşırken yorulmak normal. Zaten şarj olmak için zamanın var! 🧘‍♂️';
-                bgClass = 'bg-purple-50';
-                borderClass = 'border-purple-200';
-            } else if (currentThemeId === 6 && currentLevelId === 3) { // Müzik
-                customTitle = 'Sakinlik İksiri 🎶';
-                customDesc = 'Güzel bir müzik, seni hastaneden alıp <b>sihirli ormanlara</b> götüren bir büyü gibidir! 🌲';
-                bgClass = 'bg-purple-50';
-                borderClass = 'border-purple-200';
-            }
+            let customTitle = level.winTitle || 'Doğru Cevap!';
+            let customDesc = level.winMessage || 'Harikasın, 1 Yıldız kazandın! ⭐';
+            let bgClass = level.bgClass || 'bg-blue-50';
+            let borderClass = level.borderClass || 'border-blue-200';
+            let customEmoji = level.winEmoji || '🎉';
 
             const richModalHTML = `
                 <div class="flex flex-col items-center justify-center text-center px-2 py-4">
-                    <p class="text-3xl text-gray-800 leading-tight font-extrabold mb-4 mt-2">
+                    <p class="text-2xl sm:text-3xl text-gray-800 leading-tight font-extrabold mb-4 mt-2">
                         ${customTitle}
                     </p>
                     <p class="text-xl font-bold text-gray-600 ${bgClass} p-4 rounded-2xl border-2 ${borderClass}">
@@ -1045,7 +1040,7 @@ function handleAnswer(isCorrect, isMatchingGame = false) {
                 </div>
             `;
 
-            showModal('Tebrikler!', richModalHTML, 'Haritaya Dön', true, '🎉', () => {
+            showModal('Tebrikler!', richModalHTML, 'Haritaya Dön', true, customEmoji, () => {
                 pendingStarLevelId = currentLevelId;
                 showThemeMap(currentThemeId);
                 closeModal();
@@ -1069,9 +1064,20 @@ let modalSuccessMode = false;
 
 // Modal Yönetimi
 function showModal(title, desc, btnText, isSuccess, emojiStr = '🎉', onBtnClickCallback = null) {
-    modalTitle.textContent = title;
-    modalDesc.innerHTML = desc; // Use innerHTML for rich content
-    modalBtn.textContent = btnText;
+    if (userProgress.ageGroup === '2-5') {
+        modalTitle.classList.add('hidden');
+        modalDesc.classList.add('hidden');
+        modalBtn.textContent = isSuccess ? '🚀' : '🔁';
+        modalEmoji.className = 'text-9xl mb-4 drop-shadow-lg'; // Make emoji giant for toddlers
+    } else {
+        modalTitle.classList.remove('hidden');
+        modalDesc.classList.remove('hidden');
+        modalEmoji.className = 'text-6xl mb-4 drop-shadow-md';
+        modalTitle.textContent = title;
+        modalDesc.innerHTML = desc; // Use innerHTML for rich content
+        modalBtn.textContent = btnText;
+    }
+
     modalEmoji.textContent = emojiStr;
     modalSuccessMode = isSuccess;
 

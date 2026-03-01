@@ -281,7 +281,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Quiz / Oyun Görünümü -->
         <div id="quiz-view" class="hidden w-full max-w-md mx-auto flex-1 flex flex-col">
             <div class="flex justify-between items-center mb-6 px-4">
@@ -293,33 +292,37 @@
             </div>
 
             <div
-                class="bg-white rounded-3xl p-6 shadow-md border-4 border-pastelBlueDark flex-1 flex flex-col items-center justify-center relative overflow-hidden">
-                <h3 id="question-text" class="text-2xl font-extrabold text-gray-700 text-center mb-8 z-10">Soru Metni
+                class="bg-white rounded-3xl p-6 pt-10 shadow-md border-4 border-pastelBlueDark flex-1 flex flex-col items-center justify-center relative overflow-hidden">
+                <h3 id="question-text"
+                    class="text-2xl font-extrabold text-gray-700 text-center mb-4 sm:mb-8 z-10 shrink-0 mt-4">Soru Metni
                     Konteynırı</h3>
-                <div id="options-container" class="w-full flex flex-col gap-4 z-10">
+
+                <!-- Klasik Quiz Containerı (Ortalanmış) -->
+                <div id="options-container" class="hidden w-full min-h-full flex-1 mt-4">
                     <!-- Seçenekler JS ile dolacak -->
                 </div>
+
                 <!-- Eşleştirme Oyunu Containerı -->
                 <div id="matching-container"
-                    class="hidden w-full h-full flex flex-row gap-4 justify-between z-10 px-2 mt-4">
+                    class="hidden w-full min-h-full flex flex-row gap-4 justify-between z-10 px-2 mt-4">
                     <div id="match-left" class="flex flex-col gap-4 w-1/2"></div>
                     <div id="match-right" class="flex flex-col gap-4 w-1/2"></div>
                 </div>
 
                 <!-- Sürükle Bırak Gruplama (Sorting) Oyunu -->
-                <div id="sorting-container" class="hidden w-full h-full flex flex-col z-10 px-2 mt-2 gap-4">
+                <div id="sorting-container" class="hidden w-full min-h-full flex flex-col z-10 px-2 mt-2 gap-4 pb-8">
                     <!-- Sürüklenebilir Öğeler Sepeti (Draggables) -->
                     <div id="sorting-items"
-                        class="flex flex-wrap items-center justify-center gap-4 min-h-[100px] mb-2 p-4 bg-white/50 border-4 border-dashed border-gray-200 rounded-3xl">
+                        class="flex flex-wrap items-center justify-center gap-4 min-h-[120px] shrink-0 mb-2 p-4 bg-white/50 border-4 border-dashed border-gray-200 rounded-3xl">
                         <!-- JS ile dolacak -->
                     </div>
 
-                    <!-- Hedef Kutular (Dropzones) -->
-                    <div class="flex flex-row justify-between w-full h-full gap-4 mt-auto">
+                    <!-- Hedef Kutular (Dropzones) --->
+                    <div class="flex flex-row justify-between w-full flex-1 gap-4">
                         <div id="dropzone-healthy"
                             class="w-1/2 flex flex-col items-center bg-blue-50 border-4 border-blue-300 rounded-[30px] p-4 relative overflow-hidden transition-all">
                             <h3 id="dropzone-left-title"
-                                class="font-extrabold text-blue-700 text-sm sm:text-lg mb-2 text-center w-full bg-white/70 rounded-full py-1">
+                                class="font-extrabold text-blue-700 text-sm sm:text-lg mb-2 text-center w-full bg-white/70 rounded-3xl py-1 px-2 break-words whitespace-normal leading-tight mx-auto">
                                 Kategori 1</h3>
                             <div
                                 class="drop-content flex flex-wrap gap-2 justify-center w-full h-full content-start mt-2">
@@ -328,7 +331,7 @@
                         <div id="dropzone-unhealthy"
                             class="w-1/2 flex flex-col items-center bg-purple-50 border-4 border-purple-300 rounded-[30px] p-4 relative overflow-hidden transition-all">
                             <h3 id="dropzone-right-title"
-                                class="font-extrabold text-purple-700 text-sm sm:text-lg mb-2 text-center w-full bg-white/70 rounded-full py-1">
+                                class="font-extrabold text-purple-700 text-sm sm:text-lg mb-2 text-center w-full bg-white/70 rounded-3xl py-1 px-2 break-words whitespace-normal leading-tight mx-auto">
                                 Kategori 2</h3>
                             <div
                                 class="drop-content flex flex-wrap gap-2 justify-center w-full h-full content-start mt-2">
@@ -393,6 +396,20 @@
                         class="chick-option flex items-center justify-center w-16 h-16 rounded-full bg-white text-4xl border-4 border-gray-200 hover:scale-110 transition-transform shadow-sm"
                         data-cbg="hue-rotate(300deg)" onclick="selectChickBg('hue-rotate(300deg)')"
                         style="filter: hue-rotate(300deg);">🐥</button>
+                </div>
+            </div>
+            <div class="w-full mb-6">
+                <h3 class="font-extrabold text-gray-600 mb-3 text-center">Yaş Grubunu Seç:</h3>
+                <div class="flex gap-4 justify-center">
+                    <button
+                        class="age-option flex-1 py-2 px-1 rounded-2xl bg-white border-4 border-gray-200 font-extrabold text-gray-700 hover:scale-105 transition-transform shadow-sm text-sm sm:text-base"
+                        data-age="2-5" onclick="selectAge('2-5')">2-5 Yaş</button>
+                    <button
+                        class="age-option flex-1 py-2 px-1 rounded-2xl bg-white border-4 border-gray-200 font-extrabold text-gray-700 hover:scale-105 transition-transform shadow-sm text-sm sm:text-base"
+                        data-age="6-8" onclick="selectAge('6-8')">6-8 Yaş</button>
+                    <button
+                        class="age-option flex-1 py-2 px-1 rounded-2xl bg-white border-4 border-gray-200 font-extrabold text-gray-700 hover:scale-105 transition-transform shadow-sm text-sm sm:text-base"
+                        data-age="9+" onclick="selectAge('9+')">9+ Yaş</button>
                 </div>
             </div>
 
