@@ -2763,3 +2763,217 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(67, 198, 172, 0.4);
 }
+
+/* ═══════════════════════════════════════════════════
+   FLOWER GARDEN (replaces streak panel)
+═══════════════════════════════════════════════════ */
+.flower-garden-panel {
+    margin: 0 16px 14px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 14px 16px;
+    border: 1.5px solid rgba(255, 182, 193, 0.4);
+    box-shadow: 0 4px 20px rgba(255, 150, 180, 0.1);
+}
+
+.fg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.fg-title {
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--text-primary);
+}
+
+.fg-checkin-btn {
+    background: linear-gradient(135deg, #F093FB, #F5576C);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 7px 16px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.fg-checkin-btn:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(240, 93, 251, 0.4);
+}
+
+.fg-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.fg-slot {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.fg-flower {
+    font-size: 1.7rem;
+    line-height: 1;
+    transition: transform 0.3s;
+}
+
+.fg-flower.bloomed {
+    animation: bloom 0.5s ease;
+}
+
+.fg-flower.today-seed {
+    font-size: 1.5rem;
+    opacity: 0.7;
+    animation: gentle-bounce 2s ease infinite;
+}
+
+.fg-flower.empty-slot {
+    font-size: 1.4rem;
+    color: #ddd;
+    opacity: 0.5;
+}
+
+@keyframes bloom {
+    0% {
+        transform: scale(0.3) rotate(-10deg);
+        opacity: 0;
+    }
+
+    70% {
+        transform: scale(1.15) rotate(5deg);
+    }
+
+    100% {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
+}
+
+@keyframes gentle-bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+.fg-day {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.fg-day.today-lbl {
+    color: #F5576C;
+    font-weight: 900;
+}
+
+/* ═══════════════════════════════════════════════════
+   HOME APPRECIATE BUTTON (large, friendly)
+═══════════════════════════════════════════════════ */
+.home-appreciate-row {
+    margin: 0 16px 14px;
+}
+
+.home-appreciate-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #43C6AC, #3a7bd5);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 15px 20px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.01em;
+    box-shadow: 0 6px 20px rgba(67, 198, 172, 0.3);
+}
+
+.home-appreciate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(67, 198, 172, 0.45);
+}
+
+/* ═══════════════════════════════════════════════════
+   HOME MODULES STRIP (compact hero hub)
+═══════════════════════════════════════════════════ */
+.home-modules-strip {
+    margin: 0 16px 80px;
+}
+
+.hms-label {
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    padding-left: 4px;
+}
+
+.hero-hub-compact {
+    height: 220px !important;
+}
+
+/* ═══════════════════════════════════════════════════
+   HEADER BADGE BUTTON
+═══════════════════════════════════════════════════ */
+.home-badge-btn {
+    background: rgba(247, 151, 30, 0.12);
+    border: 2px solid rgba(247, 151, 30, 0.3);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.home-badge-btn:hover {
+    background: rgba(247, 151, 30, 0.25);
+    transform: scale(1.1);
+}
+
+/* ═══════════════════════════════════════════════════
+   CHILD-FRIENDLY GLOBAL IMPROVEMENTS
+═══════════════════════════════════════════════════ */
+/* Bigger mood buttons */
+.mood-btn {
+    font-size: 2rem !important;
+    padding: 6px !important;
+}
+
+/* Daily mission card — make text larger and more readable */
+.dm-title {
+    font-size: 1.15rem !important;
+}
+
+.dm-task {
+    font-size: 0.9rem !important;
+    line-height: 1.6 !important;
+}
+
+.dm-btn-show,
+.dm-btn-done {
+    padding: 13px 10px !important;
+    font-size: 0.9rem !important;
+}

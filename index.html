@@ -106,18 +106,19 @@
         <!-- 3. ANA SAYFA (HOME)                     -->
         <!-- ════════════════════════════════════════ -->
         <div id="screen-home" class="hidden page-content">
+            <!-- Header -->
             <div class="app-header">
                 <div class="header-greeting">
                     <span>Merhaba 👋</span>
                     <div id="home-displayname">Kahraman</div>
                 </div>
-                <div class="header-right" style="display:flex; gap:10px; align-items:center;">
+                <div class="header-right" style="display:flex;gap:10px;align-items:center;">
+                    <button class="home-badge-btn" onclick="navigateTo('badges')" title="Rozetlerim">🏅</button>
                     <div class="header-avatar" onclick="confirmResetData()">⚙️</div>
                 </div>
             </div>
 
-
-            <!-- Mood Tracker -->
+            <!-- Mood Tracker (compact) -->
             <div class="mood-tracker anim-fade-up" id="mood-tracker-section">
                 <div class="mood-label" id="mood-label-text">Bugün nasıl hissediyorsun? 💜</div>
                 <div class="mood-emojis" id="mood-emoji-row">
@@ -129,72 +130,36 @@
                 </div>
             </div>
 
-            <!-- Level & XP -->
-            <div class="level-system anim-fade-up">
-                <div class="level-info">
-                    <div class="level-badge" id="user-level">Seviye 1</div>
-                    <div class="xp-text"><span id="user-xp">0</span> / 100 XP</div>
-                </div>
-                <div class="xp-container">
-                    <div class="xp-fill" id="xp-fill" style="width: 0%"></div>
-                </div>
-            </div>
-            <!-- Doktor/Hemşire Takdir Butonu -->
-            <div class="quick-actions-row anim-fade-up" style="animation-delay:0.15s">
-                <button class="quick-action-btn qa-doctor" onclick="appreciateDoctor()">
-                    <span class="qa-icon">💙</span>
-                    <span class="qa-label">Doktorum & Hemşireme Teşekkür</span>
-                </button>
-                <button class="quick-action-btn qa-badge" onclick="navigateTo('badges')">
-                    <span class="qa-icon">🏅</span>
-                    <span class="qa-label">Rozetlerim</span>
-                </button>
-            </div>
-
-            <!-- Günlük Gerçek Hayat Görevi -->
-            <div class="daily-mission-card anim-fade-up" id="daily-mission-section" style="animation-delay:0.2s">
+            <!-- BIG Daily Mission Card (centerpiece) -->
+            <div id="daily-mission-section" class="anim-fade-up" style="animation-delay:0.1s">
                 <!-- JS ile doldurulacak -->
             </div>
 
-            <!-- Hero Hub (Merkezi Kahraman ve Modüller) -->
-            <div class="hero-hub-container">
-                <div class="central-hero" id="main-hero" onclick="navigateTo('hero-upgrade')">🦸</div>
-                <div id="hub-modules-wrapper">
-                    <!-- Modüller dairesel dizilecek -->
+            <!-- Doctor Appreciation (big button, below mission) -->
+            <div class="home-appreciate-row anim-fade-up" style="animation-delay:0.15s">
+                <button class="home-appreciate-btn" onclick="appreciateDoctor()">
+                    💙 Doktoruma & Hemşireme Teşekkür Et
+                </button>
+            </div>
+
+            <!-- Flower Garden (positive-only check-in tracker) -->
+            <div class="flower-garden-panel anim-fade-up" style="animation-delay:0.2s">
+                <div class="fg-header">
+                    <span class="fg-title">🌸 Çiçek Bahçem</span>
+                    <button class="fg-checkin-btn" id="fg-checkin-btn" onclick="openDailyCheckin()">Bugünü Ekle
+                        ✨</button>
+                </div>
+                <div class="fg-row" id="flower-garden-row">
+                    <!-- JS ile 7 çiçek render edilecek -->
                 </div>
             </div>
 
-            <!-- Streak Display -->
-            <div class="streak-panel anim-fade-up" style="animation-delay:0.2s">
-                <div class="streak-header">
-                    <span class="streak-title">🔥 Günlük Serim</span>
-                    <button class="streak-checkin-btn" onclick="openDailyCheckin()">Bugünü İşaretle ✅</button>
-                </div>
-                <div class="streak-bars" id="streak-bars">
-                    <div class="streak-item">
-                        <div class="streak-icon">🥗</div>
-                        <div class="streak-info">
-                            <div class="streak-label">Sağlıklı Beslenme</div>
-                            <div class="streak-track" id="track-nutrition"></div>
-                        </div>
-                        <div class="streak-count" id="count-nutrition">0 🔥</div>
-                    </div>
-                    <div class="streak-item">
-                        <div class="streak-icon">💊</div>
-                        <div class="streak-info">
-                            <div class="streak-label">İlaç / Tedavi</div>
-                            <div class="streak-track" id="track-medication"></div>
-                        </div>
-                        <div class="streak-count" id="count-medication">0 🔥</div>
-                    </div>
-                    <div class="streak-item">
-                        <div class="streak-icon">🏃</div>
-                        <div class="streak-info">
-                            <div class="streak-label">Sağlık Aktivitesi</div>
-                            <div class="streak-track" id="track-activity"></div>
-                        </div>
-                        <div class="streak-count" id="count-activity">0 🔥</div>
-                    </div>
+            <!-- Hero Hub (smaller, at bottom — access to modules) -->
+            <div class="home-modules-strip anim-fade-up" style="animation-delay:0.25s">
+                <div class="hms-label">🗺️ Görev Haritam</div>
+                <div class="hero-hub-container hero-hub-compact">
+                    <div class="central-hero" id="main-hero" onclick="navigateTo('hero-upgrade')">🦸</div>
+                    <div id="hub-modules-wrapper"></div>
                 </div>
             </div>
 

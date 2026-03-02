@@ -265,38 +265,91 @@ function renderHome() {
     const starsEl = document.getElementById('home-stars');
     if (starsEl) starsEl.textContent = user.stars || 0;
 
-    // Update bottom navbar icon based on gender (Superhero version)
+    // Update bottom navbar icon based on gender
     const navProfileIcon = document.getElementById('navbar-profile-icon');
     if (navProfileIcon) {
         navProfileIcon.textContent = user.gender === 'girl' ? '🦸‍♀️' : '🦸‍♂️';
     }
 
-    // Level & XP
-    const level = Math.floor((user.xp || 0) / 100) + 1;
-    const xpInLevel = (user.xp || 0) % 100;
-    const levelEl = document.getElementById('user-level');
-    if (levelEl) levelEl.textContent = `Seviye ${level}`;
-    const xpEl = document.getElementById('user-xp');
-    if (xpEl) xpEl.textContent = xpInLevel;
-    const xpFill = document.getElementById('xp-fill');
-    if (xpFill) xpFill.style.width = `${xpInLevel}%`;
-
-
-
     // Reset Hero Position
     const hero = document.getElementById('main-hero');
     if (hero) {
-        hero.textContent = user.avatar || '🦸'; // Dinamik avatarı merkeze koy
+        hero.textContent = user.avatar || '🦸';
         hero.style.left = '50%';
         hero.style.top = '50%';
         hero.style.transform = 'translate(-50%, -50%)';
     }
 
     renderHeroHub(user);
-    renderStreaks(user);
+    renderFlowerGarden(user);
     checkAutoCheckin(user);
     renderMoodTracker(user);
+
     renderDailyMission(user);
+}
+
+// ─── FLOWER GARDEN ────────────────────────────────────
+// Positive-only: each day checked-in shows a bloomed flower
+// No failures shown — just growth!
+const FLOWER_EMOJIS = ['🌱', '🌷', '🌸', '🌺', '🌻', '🌼', '🌹'];
+
+function renderFlowerGarden(user) {
+    const row = document.getElementById('flower-garden-row');
+    const btn = document.getElementById('fg-checkin-btn');
+    if (!row) return;
+
+    const history = user.streakHistory || {};
+    const today = todayStr();
+    row.innerHTML = '';
+
+    // Show last 7 days — only successes shown as flowers, empty days as seeds
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dayKey = d.toISOString().slice(0, 10);
+        const dayDone = history[dayKey]?.done === true;
+
+        const slot = document.createElement('div');
+        slot.className = 'fg-slot';
+
+        const dayLabel = i === 0 ? 'Bugün' : ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][d.getDay()];
+
+        if (dayDone) {
+            // Pick a flower based on day index for variety
+            const flowerIdx = (d.getDate() + i) % (FLOWER_EMOJIS.length - 1) + 1; // skip 🌱
+            slot.innerHTML = `
+                <div class="fg-flower bloomed">${FLOWER_EMOJIS[flowerIdx]}</div>
+                <div class="fg-day">${dayLabel}</div>
+            `;
+        } else if (i === 0) {
+            // Today — show a seed waiting to bloom
+            slot.innerHTML = `
+                <div class="fg-flower today-seed">🌱</div>
+                <div class="fg-day today-lbl">Bugün</div>
+            `;
+        } else {
+            // Past day without check-in — empty, no guilt
+            slot.innerHTML = `
+                <div class="fg-flower empty-slot">·</div>
+                <div class="fg-day">${dayLabel}</div>
+            `;
+        }
+        row.appendChild(slot);
+    }
+
+    // Update button state
+    if (btn) {
+        const todayDone = history[today]?.done === true;
+        if (todayDone) {
+            btn.textContent = '✅ Tamamlandı!';
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+        } else {
+            btn.textContent = 'Bugünü Ekle ✨';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+    }
 }
 
 // ─── DAILY MISSION SYSTEM ────────────────────────────
