@@ -22,9 +22,8 @@
         <!-- 1. GİRİŞ (LOGIN) EKRANI               -->
         <!-- ════════════════════════════════════════ -->
         <div id="screen-login" class="auth-screen">
-            <div class="auth-logo">🏰</div>
-            <h1 class="auth-title">Lösev</h1>
-            <p class="auth-subtitle">Süper Kahramanım!</p>
+            <h1 class="auth-title main-title">Lösev</h1>
+            <p class="auth-subtitle main-subtitle">Süper Kahramanım!</p>
 
             <div class="auth-form">
                 <div class="glass-card">
@@ -51,7 +50,7 @@
         <!-- 2. KAYIT (REGISTER) EKRANI             -->
         <!-- ════════════════════════════════════════ -->
         <div id="screen-register" class="auth-screen hidden">
-            <div class="auth-logo">🦸</div>
+            <div class="auth-logo">🚀</div>
             <h1 class="auth-title">Kayıt Ol</h1>
             <p class="auth-subtitle">Süper kahramanını oluştur!</p>
 
@@ -83,13 +82,13 @@
                                 <input type="radio" name="reg-gender" value="boy" class="hidden" id="gender-boy">
                                 <div class="gender-box" id="box-boy"
                                     style="padding:10px; border:2px solid #E8E8F0; border-radius:10px; text-align:center; font-size:1.5rem; transition:0.3s;">
-                                    👦</div>
+                                    🦸‍♂️</div>
                             </label>
                             <label class="gender-btn" style="flex:1; cursor:pointer;" onclick="selectRegGender('girl')">
                                 <input type="radio" name="reg-gender" value="girl" class="hidden" id="gender-girl">
                                 <div class="gender-box" id="box-girl"
                                     style="padding:10px; border:2px solid #E8E8F0; border-radius:10px; text-align:center; font-size:1.5rem; transition:0.3s;">
-                                    👧</div>
+                                    🦸‍♀️</div>
                             </label>
                         </div>
                     </div>
@@ -113,7 +112,7 @@
                     <div id="home-displayname">Kahraman</div>
                 </div>
                 <div class="header-right" style="display:flex; gap:10px; align-items:center;">
-                    <div class="header-avatar" onclick="showToast('Ayarlar menüsü yakında! ⚙️')">⚙️</div>
+                    <div class="header-avatar" onclick="confirmResetData()">⚙️</div>
                 </div>
             </div>
 

@@ -471,8 +471,9 @@ body {
 }
 
 .auth-logo {
-    font-size: 4rem;
-    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
     animation: bounce-in 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
@@ -482,6 +483,28 @@ body {
     color: #fff;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     margin-bottom: 4px;
+    text-align: center;
+}
+
+.main-title {
+    font-size: 3rem;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #fff 0%, #E0E7FF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 4px;
+    margin-bottom: 2px;
+}
+
+.main-subtitle {
+    font-size: 1.2rem;
+    color: #FFD700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-top: 0;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-weight: 800;
 }
 
 .auth-subtitle {
@@ -489,6 +512,7 @@ body {
     font-weight: 700;
     margin-bottom: 24px;
     font-size: 1rem;
+    text-align: center;
 }
 
 .auth-form {

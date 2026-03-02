@@ -99,7 +99,7 @@ function navigateTo(screenName) {
 }
 
 // ─── TEMP STATE ─────────────────────────────────────────
-let regState = { avatar: '', avatarBg: '#D6E4FF', stats: {} };
+let regState = { avatar: '', avatarBg: '#D6E4FF', ageGroup: '', gender: '' };
 
 function selectAvatar(btn) {
     regState.avatar = btn.dataset.avatar;
@@ -127,6 +127,9 @@ function getAgeGroupFromAge(age) {
 
 function selectRegGender(gender) {
     regState.gender = gender;
+    // Cinsiyete göre varsayılan avatarı da ayarla (Pelerinli/Maskeli Süper Kahraman)
+    regState.avatar = gender === 'girl' ? '🦸‍♀️' : '🦸‍♂️';
+
     document.getElementById('box-boy').style.borderColor = gender === 'boy' ? 'var(--primary)' : '#E8E8F0';
     document.getElementById('box-boy').style.backgroundColor = gender === 'boy' ? 'rgba(108, 99, 255, 0.1)' : 'transparent';
 
@@ -194,6 +197,21 @@ function doRegister() {
     navigateTo('home');
 }
 
+// ─── AUTH: RESET / CLEAR DATA ─────────────────────────
+function confirmResetData() {
+    if (confirm("⚠️ TÜM İLERLEMEN SİLİNECEK!\n\nHer şeye en baştan başlamak istediğine emin misin? Bu işlem geri alınamaz.")) {
+        resetGameData();
+    }
+}
+
+function resetGameData() {
+    localStorage.clear();
+    showToast('Tüm veriler sıfırlandı. Başa dönülüyor...');
+    setTimeout(() => {
+        window.location.reload();
+    }, 1500);
+}
+
 // ─── AUTH: LOGIN ───────────────────────────────────────
 function doLogin() {
     const username = document.getElementById('login-username').value.trim().toLowerCase();
@@ -246,10 +264,10 @@ function renderHome() {
     const starsEl = document.getElementById('home-stars');
     if (starsEl) starsEl.textContent = user.stars || 0;
 
-    // Update bottom navbar icon based on gender
+    // Update bottom navbar icon based on gender (Superhero version)
     const navProfileIcon = document.getElementById('navbar-profile-icon');
     if (navProfileIcon) {
-        navProfileIcon.textContent = user.gender === 'girl' ? '👧' : '👦';
+        navProfileIcon.textContent = user.gender === 'girl' ? '🦸‍♀️' : '🦸‍♂️';
     }
 
     // Level & XP
@@ -273,6 +291,7 @@ function renderHome() {
     // Reset Hero Position
     const hero = document.getElementById('main-hero');
     if (hero) {
+        hero.textContent = user.avatar || '🦸'; // Dinamik avatarı merkeze koy
         hero.style.left = '50%';
         hero.style.top = '50%';
         hero.style.transform = 'translate(-50%, -50%)';
