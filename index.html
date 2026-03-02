@@ -117,9 +117,16 @@
             </div>
 
 
-            <div class="welcome-banner anim-fade-up">
-                <h2>Bugün nasıl hissediyorsun? 💪</h2>
-                <p>Süper kahramanlar her zaman güçlüdür. Sen de öylesin!</p>
+            <!-- Mood Tracker -->
+            <div class="mood-tracker anim-fade-up" id="mood-tracker-section">
+                <div class="mood-label" id="mood-label-text">Bugün nasıl hissediyorsun? 💜</div>
+                <div class="mood-emojis" id="mood-emoji-row">
+                    <button class="mood-btn" onclick="selectMood(1, this)" title="Çok kötü">😢</button>
+                    <button class="mood-btn" onclick="selectMood(2, this)" title="Kötü">😕</button>
+                    <button class="mood-btn" onclick="selectMood(3, this)" title="Fena değil">😐</button>
+                    <button class="mood-btn" onclick="selectMood(4, this)" title="İyi">😊</button>
+                    <button class="mood-btn" onclick="selectMood(5, this)" title="Harika">🤩</button>
+                </div>
             </div>
 
             <!-- Level & XP -->
@@ -131,6 +138,22 @@
                 <div class="xp-container">
                     <div class="xp-fill" id="xp-fill" style="width: 0%"></div>
                 </div>
+            </div>
+            <!-- Doktor/Hemşire Takdir Butonu -->
+            <div class="quick-actions-row anim-fade-up" style="animation-delay:0.15s">
+                <button class="quick-action-btn qa-doctor" onclick="appreciateDoctor()">
+                    <span class="qa-icon">💙</span>
+                    <span class="qa-label">Doktorum & Hemşireme Teşekkür</span>
+                </button>
+                <button class="quick-action-btn qa-badge" onclick="navigateTo('badges')">
+                    <span class="qa-icon">🏅</span>
+                    <span class="qa-label">Rozetlerim</span>
+                </button>
+            </div>
+
+            <!-- Günlük Gerçek Hayat Görevi -->
+            <div class="daily-mission-card anim-fade-up" id="daily-mission-section" style="animation-delay:0.2s">
+                <!-- JS ile doldurulacak -->
             </div>
 
             <!-- Hero Hub (Merkezi Kahraman ve Modüller) -->
@@ -405,6 +428,22 @@
                 style="color:var(--danger);text-decoration:none;margin-top:8px">
                 🚨 Çıkış Yap
             </button>
+        </div>
+
+        <!-- ════════════════════════════════════════ -->
+        <!-- ROZETLER EKRANı                         -->
+        <!-- ════════════════════════════════════════ -->
+        <div id="screen-badges" class="hidden page-content">
+            <div class="app-header">
+                <button class="back-btn-simple" onclick="navigateTo('home')">←</button>
+                <div class="header-greeting">
+                    <span>Kahraman</span>
+                    <div>Rozetlerim 🏅</div>
+                </div>
+            </div>
+            <div class="module-body" id="badges-body">
+                <!-- JS ile doldurulacak -->
+            </div>
         </div>
 
         <!-- ════════════════════════════════════════ -->

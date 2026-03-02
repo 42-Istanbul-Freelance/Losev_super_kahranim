@@ -423,3 +423,134 @@ const SAMPLE_HEROES = [
         isSample: true
     }
 ];
+
+// ═══════════════════════════════════════════════════════
+// GÜNLÜK GERÇEK HAYAT GÖREVLERİ
+// ═══════════════════════════════════════════════════════
+const DAILY_MISSIONS = [
+    // 💙 Şükran / Takdir
+    {
+        id: 'thank_doctor',
+        category: 'Şükran',
+        categoryColor: '#43C6AC',
+        emoji: '💙',
+        title: 'Doktoruma Teşekkür',
+        task: 'Bugün doktoruna veya hemşirene gidip "Sağ olun, size güveniyorum" de. Bu kartı onlara göster!',
+        cardText: '💙 Bugün bana baktığın için çok teşekkür ederim! Sen benim süper kahramanımsın! 🦸',
+        showTo: 'Doktor veya Hemşire',
+        xp: 20,
+        badgeHint: '💙 Sevgi Elçisi rozetine ilerliyorsun!'
+    },
+    {
+        id: 'thank_parent',
+        category: 'Şükran',
+        categoryColor: '#43C6AC',
+        emoji: '🤗',
+        title: 'Aileme Teşekkür',
+        task: 'Yanındaki aile üyesine bir sarılma ver ve "Seninle burada olman beni güçlendiriyor" de!',
+        cardText: '🤗 Seninle burada olmak beni çok güçlü hissettiriyor. Seni çok seviyorum! ❤️',
+        showTo: 'Aile üyesi',
+        xp: 15,
+        badgeHint: null
+    },
+    // 🌟 Sosyal Bağ
+    {
+        id: 'smile_challenge',
+        category: 'Sosyal Bağ',
+        categoryColor: '#F093FB',
+        emoji: '😊',
+        title: 'Gülümseme Görevi',
+        task: 'Bugün karşına çıkan ilk 3 kişiye içten bir gülümseme ver! Bu kartı yanında taşı.',
+        cardText: '😊 Bu kart benim "Bugün 3 kişiyi gülümsetme" görevim! Sen de gülümser misin? 🌟',
+        showTo: 'Herhangi biri',
+        xp: 15,
+        badgeHint: null
+    },
+    {
+        id: 'share_drawing',
+        category: 'Yaratıcılık',
+        categoryColor: '#F7971E',
+        emoji: '🎨',
+        title: 'Çizimini Paylaş',
+        task: 'Bugün bir şey çiz — bir çiçek, kahraman, ya da ne istersen — ve yanındaki birine göster!',
+        cardText: '🎨 Bu benim bugünkü çizimim! Umuyorum ki seni de gülümsetir 🌸',
+        showTo: 'Hemşire veya aile',
+        xp: 15,
+        badgeHint: null
+    },
+    // 💊 Sağlık
+    {
+        id: 'breathing_exercise',
+        category: 'Nefes & Rahatlama',
+        categoryColor: '#6C63FF',
+        emoji: '🧘',
+        title: 'Nefes Egzersizi Göster',
+        task: 'Hemşirenle birlikte 3 derin nefes al: burundan 4 say, 4 tut, ağızdan 4 say. Bu kartı göster!',
+        cardText: '🧘 Birlikte nefes egzersizi yapabilir miyiz? Doktorum bunu önce söyledi, çok iyi hissettiriyor!',
+        showTo: 'Hemşire veya aile',
+        xp: 20,
+        badgeHint: null
+    },
+    {
+        id: 'medication_reminder',
+        category: 'Sağlıklı Alışkanlık',
+        categoryColor: '#FF6B6B',
+        emoji: '💊',
+        title: 'İlaç Hatırlatıcı',
+        task: 'Hemşirene bugünkü ilaçlarını aldığını söyle. Bu kartı göster ve onaylamasını iste!',
+        cardText: '💊 Bugün ilaçlarımı aldım! Beni onaylıyor musun? ✅',
+        showTo: 'Hemşire',
+        xp: 20,
+        badgeHint: '💊 İlaç Şampiyonu rozetine yaklaşıyorsun!'
+    },
+    {
+        id: 'healthy_food_share',
+        category: 'Sağlıklı Beslenme',
+        categoryColor: '#43C6AC',
+        emoji: '🥗',
+        title: 'Sağlıklı Besin Kahraman',
+        task: 'Bugün sağlıklı bir şey yerliysen doktoruna veya hemşirene söyle. Bu kartı göster!',
+        cardText: '🥗 Bugün sağlıklı bir şey yedim! Benim için mutlu musun? 😊',
+        showTo: 'Doktor veya Hemşire',
+        xp: 15,
+        badgeHint: null
+    },
+    // 💪 Cesaret
+    {
+        id: 'brave_question',
+        category: 'Cesaret',
+        categoryColor: '#FFD200',
+        emoji: '🦁',
+        title: 'Cesur Soru',
+        task: 'Bugün doktoruna veya hemşirene merak ettiğin bir soruyu sor! Bu kartı göster ve soruyu belirt.',
+        cardText: '🦁 Sana sormak istediğim bir şey var... Bana cevaplar mısın? Merak etmek cesaret ister!',
+        showTo: 'Doktor veya Hemşire',
+        xp: 25,
+        badgeHint: null
+    },
+    {
+        id: 'hero_pose',
+        category: 'Süper Kahraman',
+        categoryColor: '#6C63FF',
+        emoji: '🦸',
+        title: 'Süper Kahraman Pozu',
+        task: 'Ayağa kalk (ya da yatarken bile olsa!), avuçlarını bele koy ve "Ben güçlüyüm!" de! Yanındaki kişiye göster!',
+        cardText: '🦸 Bu benim süper kahraman pozum! Bugün ben güçlüyüm! Sen de bir poz yapar mısın?',
+        showTo: 'Herhangi biri',
+        xp: 15,
+        badgeHint: null
+    },
+    // 🌙 Huzur
+    {
+        id: 'sleep_prep',
+        category: 'İyi Uyku',
+        categoryColor: '#191654',
+        emoji: '🌙',
+        title: 'Uyku Hazırlığı',
+        task: 'Bu gece yatmadan önce hemşirene veya aile üyene "İyi geceler, sizi seviyorum" de. Bu kartı göster!',
+        cardText: '🌙 Bu gece iyi geceler demek istedim! Sizi çok seviyorum 💜',
+        showTo: 'Aile veya hemşire',
+        xp: 10,
+        badgeHint: null
+    }
+];

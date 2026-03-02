@@ -60,8 +60,8 @@ function showToast(message, type = '') {
 }
 
 // ─── NAVIGATION ─────────────────────────────────────────
-const screens = ['login', 'register', 'home', 'profile', 'community', 'profile-detail', 'module-detail', 'hero-upgrade', 'academy', 'minigame'];
-const authedScreens = ['home', 'profile', 'community', 'profile-detail', 'module-detail', 'hero-upgrade', 'academy', 'minigame'];
+const screens = ['login', 'register', 'home', 'profile', 'community', 'profile-detail', 'module-detail', 'hero-upgrade', 'academy', 'minigame', 'badges'];
+const authedScreens = ['home', 'profile', 'community', 'profile-detail', 'module-detail', 'hero-upgrade', 'academy', 'minigame', 'badges'];
 
 function navigateTo(screenName) {
     // Hide all
@@ -79,7 +79,7 @@ function navigateTo(screenName) {
     const isAuthed = authedScreens.includes(screenName);
 
     if (navbar) {
-        if (isAuthed && !['module-detail', 'hero-upgrade', 'academy'].includes(screenName)) {
+        if (isAuthed && !['module-detail', 'hero-upgrade', 'academy', 'badges'].includes(screenName)) {
             navbar.classList.remove('hidden');
             // Update active state
             document.querySelectorAll('.nav-item').forEach(item => {
@@ -96,6 +96,7 @@ function navigateTo(screenName) {
     if (screenName === 'community') renderCommunity();
     if (screenName === 'hero-upgrade') renderUpgradeScreen();
     if (screenName === 'academy') renderAcademyScreen();
+    if (screenName === 'badges') renderBadges();
 }
 
 // ─── TEMP STATE ─────────────────────────────────────────
@@ -294,9 +295,373 @@ function renderHome() {
     renderHeroHub(user);
     renderStreaks(user);
     checkAutoCheckin(user);
+    renderMoodTracker(user);
+    renderDailyMission(user);
 }
 
-// ─── STREAK SYSTEM ──────────────────────────────────
+// ─── DAILY MISSION SYSTEM ────────────────────────────
+function getTodaysMission() {
+    // Pick a mission based on day of year so it rotates daily but is consistent for all users on same day
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+    return DAILY_MISSIONS[dayOfYear % DAILY_MISSIONS.length];
+}
+
+function renderDailyMission(user) {
+    const section = document.getElementById('daily-mission-section');
+    if (!section) return;
+
+    const mission = getTodaysMission();
+    const today = todayStr();
+    const isDone = user.completedMissions?.[today] === mission.id;
+
+    if (isDone) {
+        section.innerHTML = `
+            <div class="dm-done">
+                <span class="dm-done-emoji">🎉</span>
+                <span>Bugünkü görevi tamamladın!</span>
+                <strong>+${mission.xp} XP</strong>
+            </div>
+        `;
+        return;
+    }
+
+    section.innerHTML = `
+        <div class="dm-inner" style="border-top: 4px solid ${mission.categoryColor}">
+            <div class="dm-header">
+                <span class="dm-category-badge" style="background:${mission.categoryColor}20;color:${mission.categoryColor}">${mission.category}</span>
+                <span class="dm-xp">+${mission.xp} XP</span>
+            </div>
+            <div class="dm-emoji">${mission.emoji}</div>
+            <div class="dm-title">${mission.title}</div>
+            <div class="dm-task">${mission.task}</div>
+            <div class="dm-show-hint">📱 <em>Kim görecek: ${mission.showTo}</em></div>
+            <div class="dm-actions">
+                <button class="dm-btn-show" onclick="openMissionCard()">Kartı Göster 📱</button>
+                <button class="dm-btn-done" onclick="confirmMissionDone()">Yaptım! ✅</button>
+            </div>
+        </div>
+    `;
+}
+
+function openMissionCard() {
+    const mission = getTodaysMission();
+
+    // Create a full-screen card overlay to show to someone
+    const overlay = document.createElement('div');
+    overlay.id = 'mission-card-overlay';
+    overlay.className = 'mission-card-overlay';
+    overlay.innerHTML = `
+        <div class="mission-show-card" style="border-top: 6px solid ${mission.categoryColor}">
+            <div class="msc-emoji">${mission.emoji}</div>
+            <div class="msc-category">${mission.category}</div>
+            <div class="msc-text">${mission.cardText}</div>
+            <div class="msc-from">— Lösev Süper Kahramanım 🦸</div>
+            <button class="msc-close-btn" onclick="closeMissionCard()">Geri Dön ←</button>
+            <button class="msc-done-btn" onclick="closeMissionCard(); confirmMissionDone()">Yaptım! Rozet Kazan 🏅</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.classList.add('visible'), 30);
+}
+
+function closeMissionCard() {
+    const overlay = document.getElementById('mission-card-overlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+        setTimeout(() => overlay.remove(), 400);
+    }
+}
+
+function confirmMissionDone() {
+    const user = getActiveUser();
+    if (!user) return;
+
+    const mission = getTodaysMission();
+    const today = todayStr();
+
+    if (user.completedMissions?.[today] === mission.id) {
+        showToast('Bugünkü görevi zaten tamamladın! 🎉', 'success');
+        return;
+    }
+
+    if (!user.completedMissions) user.completedMissions = {};
+    user.completedMissions[today] = mission.id;
+    user.xp = (user.xp || 0) + mission.xp;
+
+    // Track doctor appreciation if relevant
+    if (mission.id === 'thank_doctor') {
+        if (!user.doctorAppreciationCount) user.doctorAppreciationCount = 0;
+        user.doctorAppreciationCount++;
+    }
+
+    updateUser(user);
+    checkBadgeUnlocks(user);
+
+    // Celebration popup
+    const popup = document.createElement('div');
+    popup.className = 'streak-badge-popup';
+    popup.style.background = `linear-gradient(135deg, ${mission.categoryColor}, #2c2c60)`;
+    popup.innerHTML = `
+        <div class="badge-emoji">${mission.emoji}</div>
+        <h2>Görev Tamamlandı!</h2>
+        <p>${mission.title} görevini başardın! +${mission.xp} XP kazandın! 🌟</p>
+        ${mission.badgeHint ? `<p style="font-size:0.85rem;opacity:0.9">${mission.badgeHint}</p>` : ''}
+        <button onclick="this.parentElement.remove()" style="background:#fff;color:#333;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Harika! 🎉</button>
+    `;
+    document.body.appendChild(popup);
+    setTimeout(() => popup.classList.add('show'), 50);
+
+    renderDailyMission(user);
+    renderHome(); // refresh XP
+}
+
+
+const MOOD_LABELS = {
+    1: 'Çok zor bir gün... 💜 Buradayız, seninleyiz.',
+    2: 'Biraz yorgunsun... 💙 Bu da geçecek, güçlüsün!',
+    3: 'İdare ediyor... 😊 Süper kahramanlar da dinlenir!',
+    4: 'Bugün iyisin! 🌟 Böyle devam!',
+    5: 'Harika hissediyorsun! 🚀 Bugün her şey mümkün!'
+};
+
+function renderMoodTracker(user) {
+    const today = todayStr();
+    const todayMood = user.moodHistory?.[today];
+    const section = document.getElementById('mood-tracker-section');
+    const labelEl = document.getElementById('mood-label-text');
+
+    if (!section) return;
+
+    if (todayMood) {
+        // Already selected — show result
+        if (labelEl) labelEl.textContent = MOOD_LABELS[todayMood];
+        const btns = section.querySelectorAll('.mood-btn');
+        btns.forEach((b, i) => {
+            b.classList.toggle('selected', i + 1 === todayMood);
+            b.style.opacity = i + 1 === todayMood ? '1' : '0.4';
+            b.style.pointerEvents = 'none';
+        });
+    } else {
+        if (labelEl) labelEl.textContent = 'Bugün nasıl hissediyorsun? 💜';
+        const btns = section.querySelectorAll('.mood-btn');
+        btns.forEach(b => { b.style.opacity = '1'; b.style.pointerEvents = ''; });
+    }
+}
+
+function selectMood(level, btn) {
+    const user = getActiveUser();
+    if (!user) return;
+
+    const today = todayStr();
+    if (!user.moodHistory) user.moodHistory = {};
+    user.moodHistory[today] = level;
+    updateUser(user);
+
+    // Update UI
+    const labelEl = document.getElementById('mood-label-text');
+    if (labelEl) labelEl.textContent = MOOD_LABELS[level];
+
+    const btns = document.querySelectorAll('.mood-btn');
+    btns.forEach((b, i) => {
+        b.classList.toggle('selected', i + 1 === level);
+        b.style.opacity = i + 1 === level ? '1' : '0.4';
+        b.style.pointerEvents = 'none';
+    });
+
+    // Special care response for low moods
+    if (level <= 2) {
+        setTimeout(() => {
+            const popup = document.createElement('div');
+            popup.className = 'streak-badge-popup';
+            popup.style.background = 'linear-gradient(135deg, #A78BFA, #6C63FF)';
+            popup.innerHTML = `
+                <div class="badge-emoji">💜</div>
+                <h2>Seninleyiz!</h2>
+                <p>Zor günler de olacak. Ama sen bir süper kahramansın ve bu süreç seni daha güçlü yapıyor. Biz buradayız! 🌟</p>
+                <button onclick="this.parentElement.remove()" style="background:#fff;color:#6C63FF;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Teşekkürler 💙</button>
+            `;
+            document.body.appendChild(popup);
+            setTimeout(() => popup.classList.add('show'), 50);
+        }, 300);
+    }
+}
+
+// ─── DOCTOR APPRECIATION ─────────────────────────────
+function appreciateDoctor() {
+    const user = getActiveUser();
+    if (!user) return;
+
+    const today = todayStr();
+    if (user.lastDoctorAppreciation === today) {
+        showToast('Bugün zaten teşekkür ettin! 💙 Yarın yeniden söyleyebilirsin.', 'success');
+        return;
+    }
+
+    user.lastDoctorAppreciation = today;
+    user.xp = (user.xp || 0) + 10; // +10 XP bonus
+    user.stars = (user.stars || 0) + 1;
+    if (!user.doctorAppreciationCount) user.doctorAppreciationCount = 0;
+    user.doctorAppreciationCount++;
+
+    updateUser(user);
+    checkBadgeUnlocks(user);
+
+    // Popup
+    const popup = document.createElement('div');
+    popup.className = 'streak-badge-popup';
+    popup.style.background = 'linear-gradient(135deg, #43C6AC, #191654)';
+    popup.innerHTML = `
+        <div class="badge-emoji">💙</div>
+        <h2>Teşekkürün İletildi!</h2>
+        <p>Doktoruna ve hemşirelerine ne kadar değer verdiğini göstermek harikaydı! +10 XP ve +1 ⭐ kazandın!</p>
+        <button onclick="this.parentElement.remove()" style="background:#fff;color:#191654;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Süper! 🌟</button>
+    `;
+    document.body.appendChild(popup);
+    setTimeout(() => popup.classList.add('show'), 50);
+
+    // Re-render home XP
+    renderHome();
+}
+
+// ─── BADGE SYSTEM ────────────────────────────────────
+const ALL_BADGES = [
+    {
+        id: 'first_login',
+        emoji: '🦸',
+        title: 'Süper Kahraman Doğdu!',
+        desc: 'İlk kez uygulamayı açtın.',
+        condition: (u) => true // everyone gets this
+    },
+    {
+        id: 'streak_7',
+        emoji: '🔥',
+        title: '7 Günlük Kahraman',
+        desc: 'Herhangi bir alanda 7 günlük seri yaptın!',
+        condition: (u) => Math.max(u.streaks?.nutrition || 0, u.streaks?.medication || 0, u.streaks?.activity || 0) >= 7
+    },
+    {
+        id: 'streak_30',
+        emoji: '🏆',
+        title: 'Efsane Kahraman',
+        desc: '30 günlük üst üste seri! Gerçek bir süper kahraman!',
+        condition: (u) => Math.max(u.streaks?.nutrition || 0, u.streaks?.medication || 0, u.streaks?.activity || 0) >= 30
+    },
+    {
+        id: 'medication_hero',
+        emoji: '💊',
+        title: 'İlaç Şampiyonu',
+        desc: 'İlaçlarını 14 gün üst üste almayı başardın!',
+        condition: (u) => (u.streaks?.medication || 0) >= 14
+    },
+    {
+        id: 'nutrition_hero',
+        emoji: '🥗',
+        title: 'Sağlıklı Beslenme Ustası',
+        desc: '14 gün üst üste sağlıklı beslendin!',
+        condition: (u) => (u.streaks?.nutrition || 0) >= 14
+    },
+    {
+        id: 'doctor_love',
+        emoji: '💙',
+        title: 'Sevgi Elçisi',
+        desc: 'Doktoruna ve hemşirene ilk kez teşekkür ettin!',
+        condition: (u) => (u.doctorAppreciationCount || 0) >= 1
+    },
+    {
+        id: 'doctor_champion',
+        emoji: '❤️‍🔥',
+        title: 'Takdir Şampiyonu',
+        desc: 'Doktoruna 7 kez teşekkür ettin — sen bir ışıksın!',
+        condition: (u) => (u.doctorAppreciationCount || 0) >= 7
+    },
+    {
+        id: 'brave_heart',
+        emoji: '💜',
+        title: 'Cesur Yürek',
+        desc: 'Zor bir günde bile uygulamayı açtın. Bu cesaret!',
+        condition: (u) => Object.values(u.moodHistory || {}).some(m => m <= 2)
+    },
+    {
+        id: 'level_5',
+        emoji: '🌟',
+        title: 'Yıldız Kahraman',
+        desc: 'Seviye 5\'e ulaştın!',
+        condition: (u) => Math.floor((u.xp || 0) / 100) + 1 >= 5
+    },
+    {
+        id: 'star_collector',
+        emoji: '⭐',
+        title: 'Yıldız Toplayıcı',
+        desc: '50 yıldız kazandın!',
+        condition: (u) => (u.stars || 0) >= 50
+    }
+];
+
+function checkBadgeUnlocks(user) {
+    if (!user.unlockedBadges) user.unlockedBadges = ['first_login'];
+    let newUnlocked = false;
+    ALL_BADGES.forEach(badge => {
+        if (!user.unlockedBadges.includes(badge.id) && badge.condition(user)) {
+            user.unlockedBadges.push(badge.id);
+            newUnlocked = badge;
+        }
+    });
+    if (newUnlocked) {
+        updateUser(user);
+        setTimeout(() => {
+            const popup = document.createElement('div');
+            popup.className = 'streak-badge-popup';
+            popup.innerHTML = `
+                <div class="badge-emoji">${newUnlocked.emoji}</div>
+                <h2>Yeni Rozet!</h2>
+                <p>${newUnlocked.title}: ${newUnlocked.desc}</p>
+                <button onclick="this.parentElement.remove()" style="background:#fff;color:#F7971E;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Harika! 🎉</button>
+            `;
+            document.body.appendChild(popup);
+            setTimeout(() => popup.classList.add('show'), 50);
+        }, 1000);
+    }
+}
+
+function renderBadges() {
+    const user = getActiveUser();
+    if (!user) return;
+    if (!user.unlockedBadges) user.unlockedBadges = ['first_login'];
+
+    // Check for newly unlocked badges
+    checkBadgeUnlocks(user);
+
+    const container = document.getElementById('badges-body');
+    if (!container) return;
+
+    const unlocked = user.unlockedBadges;
+    const total = ALL_BADGES.length;
+    const count = unlocked.length;
+
+    container.innerHTML = `
+        <div class="badges-summary glass-card anim-fade-up">
+            <div class="badges-count">${count} / ${total}</div>
+            <div class="badges-progress-bar">
+                <div class="badges-progress-fill" style="width:${(count / total) * 100}%"></div>
+            </div>
+            <p>${total - count} rozet daha açılmayı bekliyor! 🏅</p>
+        </div>
+        <div class="badges-grid">
+            ${ALL_BADGES.map((badge, i) => {
+        const isUnlocked = unlocked.includes(badge.id);
+        return `
+                    <div class="badge-card ${isUnlocked ? 'unlocked' : 'locked'} anim-fade-up" style="animation-delay:${i * 0.07}s">
+                        <div class="badge-emoji-big">${isUnlocked ? badge.emoji : '🔒'}</div>
+                        <div class="badge-title">${isUnlocked ? badge.title : '???'}</div>
+                        <div class="badge-desc">${isUnlocked ? badge.desc : 'Henüz kilidi açılmadı'}</div>
+                    </div>
+                `;
+    }).join('')}
+        </div>
+    `;
+}
+
+
 const STREAK_BARS = 7; // show last 7 days
 
 function todayStr() {
