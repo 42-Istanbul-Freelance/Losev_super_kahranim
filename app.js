@@ -280,13 +280,7 @@ function renderHome() {
     const xpFill = document.getElementById('xp-fill');
     if (xpFill) xpFill.style.width = `${xpInLevel}%`;
 
-    // Stats
-    const pEl = document.getElementById('stat-power');
-    if (pEl) pEl.textContent = user.stats?.power || 1;
-    const sEl = document.getElementById('stat-speed');
-    if (sEl) sEl.textContent = user.stats?.speed || 1;
-    const iEl = document.getElementById('stat-intel');
-    if (iEl) iEl.textContent = user.stats?.intel || 1;
+
 
     // Reset Hero Position
     const hero = document.getElementById('main-hero');
@@ -298,7 +292,191 @@ function renderHome() {
     }
 
     renderHeroHub(user);
+    renderStreaks(user);
+    checkAutoCheckin(user);
 }
+
+// ─── STREAK SYSTEM ──────────────────────────────────
+const STREAK_BARS = 7; // show last 7 days
+
+function todayStr() {
+    return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function renderStreaks(user) {
+    const streaks = user.streaks || { nutrition: 0, medication: 0, activity: 0 };
+    const history = user.streakHistory || {};
+
+    ['nutrition', 'medication', 'activity'].forEach(key => {
+        const countEl = document.getElementById(`count-${key}`);
+        const trackEl = document.getElementById(`track-${key}`);
+
+        if (countEl) countEl.textContent = `${streaks[key] || 0} 🔥`;
+
+        if (trackEl) {
+            trackEl.innerHTML = '';
+            // Build last 7 days dots
+            for (let i = STREAK_BARS - 1; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dayKey = d.toISOString().slice(0, 10);
+                const dot = document.createElement('div');
+                dot.className = 'streak-dot' + (history[dayKey]?.[key] === 'yes' ? ' active' : '');
+                trackEl.appendChild(dot);
+            }
+        }
+    });
+
+    // Check if already done today
+    const btn = document.querySelector('.streak-checkin-btn');
+    const alreadyDone = user.streakHistory?.[todayStr()]?.done === true;
+    if (btn && alreadyDone) {
+        btn.textContent = '✅ Bugün Tamamlandı!';
+        btn.disabled = true;
+    }
+}
+
+function checkAutoCheckin(user) {
+    // Auto-show if not done today and user logged in (not on first visit ever)
+    if (!user.streakHistory) return; // brand new user, skip
+    const alreadyDone = user.streakHistory?.[todayStr()]?.done === true;
+    if (!alreadyDone) {
+        // slight delay so home renders first
+        setTimeout(() => openDailyCheckin(), 600);
+    }
+}
+
+// ─── CHECK-IN STATE ─────────────────────────────────
+let checkinAnswers = {};
+
+function openDailyCheckin() {
+    const user = getActiveUser();
+    if (!user) return;
+    if (user.streakHistory?.[todayStr()]?.done) {
+        showToast('Bugünü zaten tamamladın! 🎉', 'success');
+        return;
+    }
+    checkinAnswers = {};
+    // Reset steps
+    [1, 2, 3].forEach(n => {
+        const s = document.getElementById(`checkin-step-${n}`);
+        if (s) s.classList.toggle('hidden', n !== 1);
+    });
+    document.querySelectorAll('.checkin-opt').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.checkin-chip').forEach(b => b.classList.remove('active'));
+    const sub = document.getElementById('nutrition-sub');
+    if (sub) sub.style.display = 'none';
+    const lbl = document.getElementById('checkin-step-label');
+    if (lbl) lbl.textContent = 'Adım 1 / 3';
+
+    document.getElementById('checkin-modal').classList.remove('hidden');
+}
+
+function selectCheckinAnswer(key, val, btn) {
+    checkinAnswers[key] = val;
+    // Highlight
+    btn.closest('.checkin-options').querySelectorAll('.checkin-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    // Show sub-options for nutrition yes
+    if (key === 'nutrition') {
+        const sub = document.getElementById('nutrition-sub');
+        if (sub) sub.style.display = val === 'yes' ? 'block' : 'none';
+    }
+}
+
+function toggleChip(btn) {
+    btn.classList.toggle('active');
+}
+
+function nextCheckinStep(from) {
+    const key = from === 1 ? 'nutrition' : 'medication';
+    if (!checkinAnswers[key]) {
+        showToast('Lütfen bir cevap seç! 👆', 'error');
+        return;
+    }
+    document.getElementById(`checkin-step-${from}`).classList.add('hidden');
+    document.getElementById(`checkin-step-${from + 1}`).classList.remove('hidden');
+    const lbl = document.getElementById('checkin-step-label');
+    if (lbl) lbl.textContent = `Adım ${from + 1} / 3`;
+}
+
+function submitCheckin() {
+    if (!checkinAnswers.activity) {
+        showToast('Lütfen bir cevap seç! 👆', 'error');
+        return;
+    }
+
+    const user = getActiveUser();
+    if (!user) return;
+
+    const today = todayStr();
+
+    // Init structures
+    if (!user.streaks) user.streaks = { nutrition: 0, medication: 0, activity: 0 };
+    if (!user.streakHistory) user.streakHistory = {};
+
+    // Get yesterday
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = yesterday.toISOString().slice(0, 10);
+
+    ['nutrition', 'medication', 'activity'].forEach(key => {
+        const ans = checkinAnswers[key];
+        // Update streak count
+        if (ans === 'yes') {
+            const prevDoneYes = user.streakHistory?.[yKey]?.[key] === 'yes';
+            user.streaks[key] = prevDoneYes ? (user.streaks[key] || 0) + 1 : 1;
+        } else {
+            user.streaks[key] = 0; // broken
+        }
+
+        if (!user.streakHistory[today]) user.streakHistory[today] = {};
+        user.streakHistory[today][key] = ans;
+    });
+
+    user.streakHistory[today].done = true;
+
+    // XP bonus for completing
+    const yesCount = Object.values(checkinAnswers).filter(v => v === 'yes').length;
+    user.xp = (user.xp || 0) + yesCount * 5; // +5 XP per yes answer
+
+    updateUser(user);
+
+    // Close modal
+    document.getElementById('checkin-modal').classList.add('hidden');
+
+    // Show celebration
+    showStreakCelebration(user.streaks, yesCount);
+
+    // Re-render
+    renderStreaks(user);
+}
+
+function showStreakCelebration(streaks, yesCount) {
+    const maxStreak = Math.max(streaks.nutrition || 0, streaks.medication || 0, streaks.activity || 0);
+
+    let emoji = '🌟', title = 'Harika iş!', msg = 'Bugünkü görevini tamamladın!';
+
+    if (yesCount === 3) { emoji = '🏆'; title = 'Mükemmel! Tam Puan!'; msg = 'Üç alanda da zafer! +15 XP kazandın!'; }
+    else if (yesCount === 2) { emoji = '💪'; title = 'Çok iyi!'; msg = `${yesCount} görev tamamlandı! +10 XP kazandın!`; }
+    else { emoji = '😊'; title = 'Devam et!'; msg = 'Yarın her alanda tam yapabilirsin!'; }
+
+    if (maxStreak >= 30) { emoji = '🦸'; title = 'EFSANE KAHRAMAN!'; msg = '30 günlük seri! Sen gerçek bir süper kahramansın!'; }
+    else if (maxStreak >= 7) { emoji = '🔥'; title = '7 Günlük Seri!'; msg = 'Bir haftayı doldurdun! Süper kahraman madalyası!'; }
+
+    const popup = document.createElement('div');
+    popup.className = 'streak-badge-popup';
+    popup.innerHTML = `
+        <div class="badge-emoji">${emoji}</div>
+        <h2>${title}</h2>
+        <p>${msg}</p>
+        <button onclick="this.parentElement.remove()" style="background:#fff;color:#F7971E;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Harika! 🎉</button>
+    `;
+    document.body.appendChild(popup);
+    setTimeout(() => popup.classList.add('show'), 50);
+}
+
+
 
 function renderHeroHub(user) {
     const wrapper = document.getElementById('hub-modules-wrapper');

@@ -1969,3 +1969,310 @@ body {
         opacity: 1;
     }
 }
+
+/* ═══════════════════════════════════════════════════
+   STREAK PANEL
+═══════════════════════════════════════════════════ */
+.streak-panel {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    margin: 0 16px 16px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(108, 99, 255, 0.12);
+}
+
+.streak-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.streak-title {
+    font-weight: 900;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.streak-checkin-btn {
+    background: linear-gradient(135deg, #6C63FF, #A78BFA);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 12px rgba(108, 99, 255, 0.35);
+}
+
+.streak-checkin-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 18px rgba(108, 99, 255, 0.5);
+}
+
+.streak-checkin-btn:disabled {
+    background: #ccc;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.streak-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.streak-item:last-child {
+    margin-bottom: 0;
+}
+
+.streak-icon {
+    font-size: 1.4rem;
+    width: 36px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.streak-info {
+    flex: 1;
+}
+
+.streak-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.streak-track {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+}
+
+.streak-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #E8E8F0;
+    transition: background 0.3s;
+}
+
+.streak-dot.active {
+    background: linear-gradient(135deg, #F7971E, #FFD200);
+    box-shadow: 0 0 5px rgba(247, 151, 30, 0.6);
+}
+
+.streak-count {
+    font-weight: 900;
+    font-size: 0.9rem;
+    color: #F7971E;
+    min-width: 44px;
+    text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════
+   DAILY CHECK-IN MODAL
+═══════════════════════════════════════════════════ */
+.checkin-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 12, 60, 0.7);
+    backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 0 0 0;
+    animation: fade-in 0.3s ease;
+}
+
+.checkin-overlay.hidden {
+    display: none;
+}
+
+.checkin-card {
+    background: #fff;
+    border-radius: 28px 28px 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 28px 24px 36px;
+    animation: slide-up 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@keyframes slide-up {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.checkin-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.checkin-logo {
+    font-size: 2.5rem;
+    margin-bottom: 6px;
+}
+
+.checkin-header h2 {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+}
+
+.checkin-header p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.checkin-step {
+    animation: anim-fade-in 0.3s ease;
+}
+
+.checkin-question {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+    line-height: 1.4;
+}
+
+.checkin-options {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.checkin-opt {
+    flex: 1;
+    padding: 14px 10px;
+    border: 2.5px solid #E8E8F0;
+    border-radius: 16px;
+    background: #FAFAFF;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    color: var(--text-primary);
+}
+
+.checkin-opt:hover {
+    border-color: var(--primary);
+    background: rgba(108, 99, 255, 0.08);
+    transform: scale(1.02);
+}
+
+.checkin-opt.selected {
+    border-color: var(--primary);
+    background: rgba(108, 99, 255, 0.15);
+    color: var(--primary);
+    transform: scale(1.04);
+    box-shadow: 0 4px 12px rgba(108, 99, 255, 0.25);
+}
+
+.checkin-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.checkin-chip {
+    background: #F0F0FF;
+    border: 1.5px solid #E0DBFF;
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-primary);
+}
+
+.checkin-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 3px 10px rgba(108, 99, 255, 0.35);
+}
+
+.checkin-next-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--primary), #A78BFA);
+    color: #fff;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 6px 20px rgba(108, 99, 255, 0.35);
+}
+
+.checkin-next-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 26px rgba(108, 99, 255, 0.5);
+}
+
+/* Badge popup */
+.streak-badge-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: linear-gradient(135deg, #F7971E, #FFD200);
+    border-radius: 24px;
+    padding: 32px 28px;
+    text-align: center;
+    z-index: 10000;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 320px;
+    width: 90%;
+}
+
+.streak-badge-popup.show {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.streak-badge-popup h2 {
+    color: #fff;
+    margin: 8px 0 4px;
+    font-size: 1.4rem;
+}
+
+.streak-badge-popup p {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 16px;
+}
+
+.streak-badge-popup .badge-emoji {
+    font-size: 3.5rem;
+}

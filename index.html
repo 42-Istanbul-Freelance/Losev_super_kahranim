@@ -141,12 +141,40 @@
                 </div>
             </div>
 
-            <!-- Quick Stats -->
-            <div class="hero-stats-row anim-fade-up" style="animation-delay: 0.3s">
-                <div class="stat-chip">⚔️ <span id="stat-power">1</span></div>
-                <div class="stat-chip">⚡ <span id="stat-speed">1</span></div>
-                <div class="stat-chip">🧠 <span id="stat-intel">1</span></div>
+            <!-- Streak Display -->
+            <div class="streak-panel anim-fade-up" style="animation-delay:0.2s">
+                <div class="streak-header">
+                    <span class="streak-title">🔥 Günlük Serim</span>
+                    <button class="streak-checkin-btn" onclick="openDailyCheckin()">Bugünü İşaretle ✅</button>
+                </div>
+                <div class="streak-bars" id="streak-bars">
+                    <div class="streak-item">
+                        <div class="streak-icon">🥗</div>
+                        <div class="streak-info">
+                            <div class="streak-label">Sağlıklı Beslenme</div>
+                            <div class="streak-track" id="track-nutrition"></div>
+                        </div>
+                        <div class="streak-count" id="count-nutrition">0 🔥</div>
+                    </div>
+                    <div class="streak-item">
+                        <div class="streak-icon">💊</div>
+                        <div class="streak-info">
+                            <div class="streak-label">İlaç / Tedavi</div>
+                            <div class="streak-track" id="track-medication"></div>
+                        </div>
+                        <div class="streak-count" id="count-medication">0 🔥</div>
+                    </div>
+                    <div class="streak-item">
+                        <div class="streak-icon">🏃</div>
+                        <div class="streak-info">
+                            <div class="streak-label">Sağlık Aktivitesi</div>
+                            <div class="streak-track" id="track-activity"></div>
+                        </div>
+                        <div class="streak-count" id="count-activity">0 🔥</div>
+                    </div>
+                </div>
             </div>
+
         </div>
 
         <!-- ════════════════════════════════════════ -->
@@ -171,34 +199,7 @@
                         Yıldızlarını kullanarak özelliklerini geliştirebilirsin!
                     </p>
                 </div>
-                <div class="upgrade-list">
-                    <div class="glass-card upgrade-item anim-fade-up" style="animation-delay:0.1s">
-                        <div class="topic-icon">⚔️</div>
-                        <div class="upgrade-info">
-                            <h4>Güç</h4>
-                            <p>Daha zorlu görevleri başarmanı sağlar.</p>
-                        </div>
-                        <button class="upgrade-btn" onclick="upgradeStat('power')">5 ⭐</button>
-                    </div>
 
-                    <div class="glass-card upgrade-item anim-fade-up" style="animation-delay:0.2s">
-                        <div class="topic-icon">⚡</div>
-                        <div class="upgrade-info">
-                            <h4>Hız</h4>
-                            <p>Görevleri daha hızlı tamamlamanı sağlar.</p>
-                        </div>
-                        <button class="upgrade-btn" onclick="upgradeStat('speed')">5 ⭐</button>
-                    </div>
-
-                    <div class="glass-card upgrade-item anim-fade-up" style="animation-delay:0.3s">
-                        <div class="topic-icon">🧠</div>
-                        <div class="upgrade-info">
-                            <h4>Zeka</h4>
-                            <p>Daha fazla XP kazanmanı sağlar.</p>
-                        </div>
-                        <button class="upgrade-btn" onclick="upgradeStat('intel')">5 ⭐</button>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -433,7 +434,79 @@
         </div>
 
         <!-- ════════════════════════════════════════ -->
-        <!-- NAVİGASYON BARI                         -->
+        <!-- GÜNLÜK CHECK-İN MODAL                   -->
+        <!-- ════════════════════════════════════════ -->
+        <div id="checkin-modal" class="checkin-overlay hidden">
+            <div class="checkin-card">
+                <div class="checkin-header">
+                    <div class="checkin-logo">✨</div>
+                    <h2>Bugünün Raporu</h2>
+                    <p id="checkin-step-label">Adım 1 / 3</p>
+                </div>
+
+                <!-- Step 1: Beslenme -->
+                <div class="checkin-step" id="checkin-step-1">
+                    <div class="checkin-question">🥗 Bugün sağlıklı bir şey yedin mi?</div>
+                    <div class="checkin-options">
+                        <button class="checkin-opt" onclick="selectCheckinAnswer('nutrition', 'yes', this)">😋 Evet,
+                            yedim!</button>
+                        <button class="checkin-opt" onclick="selectCheckinAnswer('nutrition', 'no', this)">😅 Bugün
+                            yapmadım</button>
+                    </div>
+                    <div class="checkin-sub" id="nutrition-sub" style="display:none">
+                        <p style="font-size:0.85rem;margin-bottom:8px;color:var(--text-secondary);">Ne yedin?
+                            (Seçebilirsin)</p>
+                        <div class="checkin-chips">
+                            <button class="checkin-chip" onclick="toggleChip(this)">🥦 Sebze</button>
+                            <button class="checkin-chip" onclick="toggleChip(this)">🍎 Meyve</button>
+                            <button class="checkin-chip" onclick="toggleChip(this)">🍲 Çorba</button>
+                            <button class="checkin-chip" onclick="toggleChip(this)">🥛 Süt</button>
+                            <button class="checkin-chip" onclick="toggleChip(this)">🐟 Balık</button>
+                        </div>
+                    </div>
+                    <button class="checkin-next-btn" onclick="nextCheckinStep(1)">Devam →</button>
+                </div>
+
+                <!-- Step 2: İlaç -->
+                <div class="checkin-step hidden" id="checkin-step-2">
+                    <div class="checkin-question">💊 Bugün ilaçlarını / tedavini aldın mı?</div>
+                    <div class="checkin-options">
+                        <button class="checkin-opt" onclick="selectCheckinAnswer('medication', 'yes', this)">💪 Evet,
+                            aldım!</button>
+                        <button class="checkin-opt" onclick="selectCheckinAnswer('medication', 'no', this)">😔 Bugün
+                            alamadım</button>
+                    </div>
+                    <div
+                        style="background:rgba(108,99,255,0.1);border-radius:12px;padding:10px;margin-top:12px;font-size:0.85rem;color:#6C63FF;">
+                        💡 <strong>İpucu:</strong> İlaçlarını düzzenli almak süper güçlerin için çok önemli!
+                    </div>
+                    <button class="checkin-next-btn" onclick="nextCheckinStep(2)">Devam →</button>
+                </div>
+
+                <!-- Step 3: Aktivite -->
+                <div class="checkin-step hidden" id="checkin-step-3">
+                    <div class="checkin-question">🏃 Bugün sağlığın için ne yaptın?</div>
+                    <div class="checkin-options">
+                        <button class="checkin-opt" onclick="selectCheckinAnswer('activity', 'yes', this)">⭐ Bir şeyler
+                            yaptım!</button>
+                        <button class="checkin-opt" onclick="selectCheckinAnswer('activity', 'no', this)">😴 Bugün
+                            dinlendim</button>
+                    </div>
+                    <div class="checkin-chips" id="activity-chips">
+                        <button class="checkin-chip" onclick="toggleChip(this)">🚶 Yürüydüm</button>
+                        <button class="checkin-chip" onclick="toggleChip(this)">💤 İyi uyudum</button>
+                        <button class="checkin-chip" onclick="toggleChip(this)">🎨 Resim yaptım</button>
+                        <button class="checkin-chip" onclick="toggleChip(this)">📚 Kitap okudum</button>
+                        <button class="checkin-chip" onclick="toggleChip(this)">🎵 Müzik dinledim</button>
+                        <button class="checkin-chip" onclick="toggleChip(this)">🧘 Nefes egzersizi</button>
+                    </div>
+                    <button class="checkin-next-btn" onclick="submitCheckin()"
+                        style="background:linear-gradient(135deg,#F093FB,#F5576C);">🎉 Günü Tamamla!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NAV BAR -->
         <!-- ════════════════════════════════════════ -->
         <nav class="navbar hidden" id="main-navbar">
             <button class="nav-item active" data-screen="home" onclick="navigateTo('home')">
