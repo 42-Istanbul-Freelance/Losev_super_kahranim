@@ -1,1131 +1,1254 @@
-// Uygulamanın varsayılan (başlangıç) durumu
-const defaultProgress = {
-    currentLevel: 1,
-    stars: 0,
-    avatar: null, // İlk girişte null ki modal açılsın
-    avatarBg: 'bg-pastelBlue',
-    chickHue: 'hue-rotate(0deg)',
-    soundEnabled: true,
-    ageGroup: null, // '2-5', '6-8', '9+'
-    themes: JSON.parse(JSON.stringify(themesData))
-};
+// ═══════════════════════════════════════════════════════
+// LÖSEV SÜPER KAHRAMANIM — Application Logic
+// ═══════════════════════════════════════════════════════
 
-// Global kullanıcı ilerleme değişkeni
-let userProgress = {};
+// ─── DATA LAYER ─────────────────────────────────────────
+function getAllUsers() {
+    return JSON.parse(localStorage.getItem('losevUsers') || '[]');
+}
 
-// Aktif görünüm durumu
-let currentThemeId = null;
-let currentLevelId = null;
+function saveAllUsers(users) {
+    localStorage.setItem('losevUsers', JSON.stringify(users));
+}
 
-// Global animasyon bekleme durumu: Haritaya dönünce yıldız çıkacak (seviye id'sini tutar)
-let pendingStarLevelId = null;
+function getActiveUserId() {
+    return localStorage.getItem('losevActiveUser') || null;
+}
 
-// Başlangıç Yüklemesi
-function initProgress() {
-    const storedData = localStorage.getItem('losevAppProgress');
+function setActiveUserId(id) {
+    if (id) localStorage.setItem('losevActiveUser', id);
+    else localStorage.removeItem('losevActiveUser');
+}
 
-    if (storedData) {
-        userProgress = JSON.parse(storedData);
+function getActiveUser() {
+    const id = getActiveUserId();
+    if (!id) return null;
+    return getAllUsers().find(u => u.id === id) || null;
+}
 
-        // Eski kayıtlara avatar garantisi ver
-        if (userProgress.avatar === undefined || !userProgress.avatar) {
-            userProgress.avatar = null;
-        }
-        if (userProgress.chickHue === undefined) {
-            userProgress.chickHue = 'hue-rotate(0deg)';
-        }
-        if (userProgress.soundEnabled === undefined) {
-            userProgress.soundEnabled = true;
-        }
-
-        // Veritabanı (data.js) üzerindeki yapısal güncellemeleri localStorage'a yedir (Merge işlemi)
-        // Eğer kullanıcı daha önce eski veritabanı ile giriş yaptıysa levels dizileri eski (boş) kalıyordu.
-        themesData.forEach(defaultTheme => {
-            let userTheme = userProgress.themes.find(t => t.id === defaultTheme.id);
-            if (!userTheme) {
-                userProgress.themes.push(JSON.parse(JSON.stringify(defaultTheme)));
-            } else {
-                // Her zaman data.js'teki en güncel yapısal verileri alıp, kullanıcının kilit (isLocked) durumunu koruyalım.
-                // Kullanıcının daha önce kilitlerini açtığı levelleri tespit et
-                const openedLevelIds = userTheme.levels && userTheme.levels.length > 0
-                    ? userTheme.levels.filter(l => !l.isLocked).map(l => l.id)
-                    : [1]; // Varsayılan sadece level 1 açıktır
-
-                // data.js üzerindeki taze temayı tamamen kopyala (İkonlar, oyun tipleri, sorular vb. en güncel hali)
-                const updatedTheme = JSON.parse(JSON.stringify(defaultTheme));
-
-                // Önceki kilitleri tekrar aç (Kullanıcının ilerlemesini koru)
-                updatedTheme.levels.forEach(l => {
-                    if (openedLevelIds.includes(l.id)) {
-                        l.isLocked = false;
-                    }
-                });
-
-                // Eski temasını yenisiyle değiştir
-                const index = userProgress.themes.findIndex(t => t.id === defaultTheme.id);
-                userProgress.themes[index] = updatedTheme;
-            }
-        });
-        saveProgress();
-    } else {
-        userProgress = { ...defaultProgress };
-        saveProgress();
-    }
-
-    if (!userProgress.avatar || userProgress.avatar === null || !userProgress.ageGroup) {
-        // İlk defa giriyorsa veya avatar/yaş seçilmemişse ayarları zorunlu aç
-        openSettings(true);
-    } else {
-        updateUI();
-        showHome();
+function updateUser(updatedUser) {
+    const users = getAllUsers();
+    const idx = users.findIndex(u => u.id === updatedUser.id);
+    if (idx !== -1) {
+        users[idx] = updatedUser;
+        saveAllUsers(users);
     }
 }
 
-// İlerlemeyi localStorage'a kaydeden fonksiyon
-function saveProgress() {
-    localStorage.setItem('losevAppProgress', JSON.stringify(userProgress));
-}
-
-function updateUI() {
-    const starCountElement = document.getElementById('star-count');
-    if (starCountElement) {
-        starCountElement.textContent = userProgress.stars;
+// ─── SIMPLE HASH (not secure, just obfuscation) ────────
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0;
     }
-    const avatarElement = document.getElementById('hero-avatar');
-    if (avatarElement) {
-        avatarElement.textContent = userProgress.avatar || '🧒';
-        // Avatar arka planını güncelle
-        avatarElement.className = `w-16 h-16 rounded-full flex items-center justify-center text-3xl border-4 border-white shadow-md ${userProgress.avatarBg || 'bg-pastelBlue'}`;
-    }
-
-    // Civciv rengini güncelle (CSS Filter ile emoji karakterinin kendi rengini değiştiriyoruz)
-    const chickElement = document.getElementById('chick-character');
-    if (chickElement) {
-        chickElement.className = `chick-animate absolute w-32 h-32 rounded-full text-[5rem] flex items-center justify-center shadow-lg z-20 border-4 border-pastelYellow bg-white`;
-        chickElement.style.filter = userProgress.chickHue || 'hue-rotate(0deg)';
-    }
+    return hash.toString(36);
 }
 
-// ----------------------------------------------------
-// Ayarlar Modalı Fonksiyonları
-// ----------------------------------------------------
-let tempSettings = {
-    avatar: '🧒', // Varsayılanlar
-    avatarBg: 'bg-pastelBlue',
-    chickHue: 'hue-rotate(0deg)',
-    soundEnabled: true
-};
-
-function openSettings(isFirstTime = false) {
-    const modal = document.getElementById('settings-modal');
-    modal.classList.remove('hidden');
-
-    // Geçici ayarları mevcut ayarlara eşitle (eğer varsa)
-    if (userProgress.avatar) {
-        tempSettings.avatar = userProgress.avatar;
-        tempSettings.avatarBg = userProgress.avatarBg;
-        tempSettings.chickHue = userProgress.chickHue || 'hue-rotate(0deg)';
-        tempSettings.soundEnabled = userProgress.soundEnabled !== false;
-        tempSettings.ageGroup = userProgress.ageGroup || null;
-    } else {
-        // İlk çalışmada desc metnini göster
-        document.getElementById('settings-desc').classList.remove('hidden');
-    }
-
-    // Arayüzdeki border'ları tempSettings'e göre boya
-    updateSettingsUI();
-
-    // Animasyon
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-    }, 10);
+// ─── TOAST ──────────────────────────────────────────────
+let toastTimeout = null;
+function showToast(message, type = '') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast' + (type ? ` toast-${type}` : '');
+    // Trigger reflow
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-function selectAvatar(avatar, bgClass) {
-    tempSettings.avatar = avatar;
-    tempSettings.avatarBg = bgClass;
-    updateSettingsUI();
-}
+// ─── NAVIGATION ─────────────────────────────────────────
+const screens = ['login', 'register', 'home', 'profile', 'community', 'profile-detail', 'module-detail', 'hero-upgrade', 'academy', 'minigame'];
+const authedScreens = ['home', 'profile', 'community', 'profile-detail', 'module-detail', 'hero-upgrade', 'academy', 'minigame'];
 
-function selectAge(age) {
-    tempSettings.ageGroup = age;
-    updateSettingsUI();
-}
-
-function selectChickBg(hueFilter) {
-    tempSettings.chickHue = hueFilter;
-    updateSettingsUI();
-}
-
-function toggleSound() {
-    tempSettings.soundEnabled = !tempSettings.soundEnabled;
-    updateSettingsUI();
-}
-
-function updateSettingsUI() {
-    // Avatar borderlarını güncelle
-    document.querySelectorAll('.avatar-option').forEach(btn => {
-        if (btn.dataset.avatar === tempSettings.avatar) {
-            btn.classList.add('border-blue-500', 'scale-110');
-            btn.classList.remove('border-gray-200');
-        } else {
-            btn.classList.remove('border-blue-500', 'scale-110');
-            btn.classList.add('border-gray-200');
-        }
+function navigateTo(screenName) {
+    // Hide all
+    screens.forEach(s => {
+        const el = document.getElementById(`screen-${s}`);
+        if (el) el.classList.add('hidden');
     });
 
-    // Civciv borderlarını güncelle
-    document.querySelectorAll('.chick-option').forEach(btn => {
-        if (btn.dataset.cbg === tempSettings.chickHue) {
-            btn.classList.add('border-blue-500', 'scale-110');
-            btn.classList.remove('border-gray-200');
-        } else {
-            btn.classList.remove('border-blue-500', 'scale-110');
-            btn.classList.add('border-gray-200');
-        }
-    });
+    // Show target
+    const target = document.getElementById(`screen-${screenName}`);
+    if (target) target.classList.remove('hidden');
 
-    // Yaş Seçimi borderlarını güncelle
-    document.querySelectorAll('.age-option').forEach(btn => {
-        if (btn.dataset.age === tempSettings.ageGroup) {
-            btn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700', 'scale-105');
-            btn.classList.remove('border-gray-200', 'bg-white', 'text-gray-700');
-        } else {
-            btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700', 'scale-105');
-            btn.classList.add('border-gray-200', 'bg-white', 'text-gray-700');
-        }
-    });
+    // Navbar
+    const navbar = document.getElementById('main-navbar');
+    const isAuthed = authedScreens.includes(screenName);
 
-    // Ses Butonu Güncelle
-    const soundBtn = document.getElementById('sound-toggle-btn');
-    if (soundBtn) {
-        soundBtn.textContent = tempSettings.soundEnabled ? '🔊' : '🔇';
-        if (tempSettings.soundEnabled) {
-            soundBtn.classList.add('bg-green-100', 'border-green-300');
-            soundBtn.classList.remove('bg-red-100', 'border-red-300');
+    if (navbar) {
+        if (isAuthed && !['module-detail', 'hero-upgrade', 'academy'].includes(screenName)) {
+            navbar.classList.remove('hidden');
+            // Update active state
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.screen === screenName);
+            });
         } else {
-            soundBtn.classList.add('bg-red-100', 'border-red-300');
-            soundBtn.classList.remove('bg-green-100', 'border-green-300');
+            navbar.classList.add('hidden');
         }
-        soundBtn.classList.add('p-3', 'rounded-full', 'border-2', 'shadow-sm', 'w-16', 'h-16', 'flex', 'items-center', 'justify-center');
     }
+
+    // Screen-specific init
+    if (screenName === 'home') renderHome();
+    if (screenName === 'profile') renderProfile();
+    if (screenName === 'community') renderCommunity();
+    if (screenName === 'hero-upgrade') renderUpgradeScreen();
+    if (screenName === 'academy') renderAcademyScreen();
 }
 
-function saveAndCloseSettings() {
-    const modal = document.getElementById('settings-modal');
+// ─── TEMP STATE ─────────────────────────────────────────
+let regState = { avatar: '', avatarBg: '#D6E4FF', stats: {} };
 
-    // Kaydetmek için önce validasyon yap
-    if (!tempSettings.avatar || !tempSettings.ageGroup) {
-        alert("Lütfen bir kahraman ve yaş grubu seçin! 🦸‍♀️");
+function selectAvatar(btn) {
+    regState.avatar = btn.dataset.avatar;
+    regState.avatarBg = btn.dataset.bg;
+    document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
+// ─── AGE CALCULATION ──────────────────────────────────
+function calculateAge(birthDate) {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+function getAgeGroupFromAge(age) {
+    if (age <= 6) return '3-6';
+    return '6-12';
+}
+
+function selectRegGender(gender) {
+    regState.gender = gender;
+    document.getElementById('box-boy').style.borderColor = gender === 'boy' ? 'var(--primary)' : '#E8E8F0';
+    document.getElementById('box-boy').style.backgroundColor = gender === 'boy' ? 'rgba(108, 99, 255, 0.1)' : 'transparent';
+
+    document.getElementById('box-girl').style.borderColor = gender === 'girl' ? 'var(--primary)' : '#E8E8F0';
+    document.getElementById('box-girl').style.backgroundColor = gender === 'girl' ? 'rgba(108, 99, 255, 0.1)' : 'transparent';
+}
+
+// ─── AUTH: REGISTER ────────────────────────────────────
+function doRegister() {
+    const displayName = document.getElementById('reg-displayname').value.trim();
+    const username = document.getElementById('reg-username').value.trim().toLowerCase();
+    const password = document.getElementById('reg-password').value;
+    const birthDate = document.getElementById('reg-birthdate').value;
+
+    if (!displayName) { showToast('Lütfen adını gir!', 'error'); return; }
+    if (!username || username.length < 3) { showToast('Kullanıcı adı en az 3 karakter olmalı!', 'error'); return; }
+    if (/[^a-z0-9_]/.test(username)) { showToast('Kullanıcı adı sadece harf, rakam ve _ içerebilir!', 'error'); return; }
+    if (!password || password.length < 4) { showToast('Şifre en az 4 karakter olmalı!', 'error'); return; }
+    if (!birthDate) { showToast('Lütfen doğum tarihini seç!', 'error'); return; }
+    if (!regState.gender) { showToast('Lütfen cinsiyetini seç!', 'error'); return; }
+
+
+    const users = getAllUsers();
+    if (users.find(u => u.username === username)) {
+        showToast('Bu kullanıcı adı zaten alınmış!', 'error');
         return;
     }
 
-    // Kaydet
-    userProgress.avatar = tempSettings.avatar;
-    userProgress.avatarBg = tempSettings.avatarBg;
-    userProgress.chickHue = tempSettings.chickHue || 'hue-rotate(0deg)';
-    userProgress.soundEnabled = tempSettings.soundEnabled !== false;
-    userProgress.ageGroup = tempSettings.ageGroup;
-    saveProgress();
-    updateUI();
-
-    // Modalı Kapat
-    modal.classList.add('opacity-0');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        document.getElementById('settings-desc').classList.add('hidden'); // Kapatırken first-time metnini gizle
-
-        // Eğer ilk girişte oyun ekranı gösterilmediyse, şimdi göster
-        if (document.getElementById('home-view').classList.contains('hidden') && document.getElementById('theme-view').classList.contains('hidden') && document.getElementById('quiz-view').classList.contains('hidden')) {
-            showHome();
-        }
-    }, 300);
-}
-
-function addStar(amount = 1) {
-    userProgress.stars += amount;
-    saveProgress();
-    updateUI();
-}
-
-// Görünüm Yönetimi
-const homeView = document.getElementById('home-view');
-const themeView = document.getElementById('theme-view');
-const quizView = document.getElementById('quiz-view');
-
-function hideAllViews() {
-    homeView.classList.add('hidden');
-    themeView.classList.add('hidden');
-    quizView.classList.add('hidden');
-}
-
-function showHome() {
-    hideAllViews();
-    homeView.classList.remove('hidden');
-    renderCircleMenu();
-
-    // Ana sayfaya dönüldüğünde body arkaplanı varsayılan degrade renklerine döner
-    document.body.className = 'bg-gradient-to-br from-pastelBlue via-pastelBg to-pastelPink h-screen flex flex-col items-center overflow-hidden';
-    document.body.style.removeProperty('--bg-img');
-
-    // Civcivi merkeze al ve eski haline getir
-    const chick = document.getElementById('chick-character');
-    chick.style.transition = "none";
-    chick.classList.add('chick-animate');
-    chick.style.transform = `translate(-50%, -50%)`;
-    chick.style.left = '50%';
-    chick.style.top = '50%';
-}
-
-// ----------------------------------------------------
-// Dairesel Menü Çizimi
-// ----------------------------------------------------
-function renderCircleMenu() {
-    const container = document.getElementById('circle-container');
-    // İçerikteki önceki butonları temizle (Civciv hariç)
-    Array.from(container.children).forEach(child => {
-        if (child.id !== 'chick-character') {
-            child.remove();
-        }
-    });
-
-    const themes = userProgress.themes;
-    const total = themes.length;
-    const radius = 150; // Dairenin yarıçapı
-    const centerX = 190;
-    const centerY = 190;
-
-    themes.forEach((theme, index) => {
-        const angle = (index / total) * (2 * Math.PI) - (Math.PI / 2); // Üstten başlat
-        const x = centerX + radius * Math.cos(angle);
-        const y = centerY + radius * Math.sin(angle);
-
-        const btn = document.createElement('button');
-
-        if (theme.isLocked) {
-            btn.className = 'absolute w-[80px] h-[80px] rounded-full bg-gray-300 border-[4px] border-gray-400 shadow-sm flex items-center justify-center cursor-not-allowed hover:scale-105 transition-transform z-10';
-            btn.innerHTML = `<span class="text-3xl">🔒</span>`;
-        } else {
-            btn.className = 'absolute w-[95px] h-[95px] rounded-full bg-white border-[4px] border-pastelYellow shadow-md flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all z-10 hover:bg-pastelBg';
-            btn.innerHTML = `<span class="text-5xl drop-shadow-sm">${theme.icon}</span>`;
-
-            btn.onclick = (e) => {
-                const chick = document.getElementById('chick-character');
-                // Kayma için bounce animasyonunu geçici kapat ve transition ekle
-                chick.classList.remove('chick-animate');
-                chick.style.transition = "all 0.5s ease-in-out";
-
-                // Tıklanan butona doğru civcivi hareket ettir
-                chick.style.left = `${x}px`;
-                chick.style.top = `${y}px`;
-                chick.style.transform = `translate(-50%, -50%) scale(0.6)`;
-
-                // Biraz bekleyip haritayı aç
-                setTimeout(() => {
-                    showThemeMap(theme.id);
-                }, 500);
-            };
-        }
-
-        btn.style.left = `${x}px`;
-        btn.style.top = `${y}px`;
-        btn.style.transform = `translate(-50%, -50%)`;
-
-        container.appendChild(btn);
-    });
-}
-
-// ----------------------------------------------------
-// Tema İçi Bölüm (Map) Görünümü
-// ----------------------------------------------------
-function showThemeMap(themeId) {
-    currentThemeId = themeId;
-    hideAllViews();
-    themeView.classList.remove('hidden');
-    themeView.classList.add('flex');
-    renderThemeMap();
-}
-
-// ----------------------------------------------------
-// Harita (Yol) Çizimi (Yatay Zigzag)
-// ----------------------------------------------------
-function renderThemeMap() {
-    const theme = userProgress.themes.find(t => t.id === currentThemeId);
-    if (!theme) return;
-
-    // Arkaplan Güncelleme: Her temaya özel pattern sınıfı yüklenir
-    const patternClasses = {
-        1: 'bg-yardimlasma-pattern',
-        2: 'bg-paylasma-pattern',
-        3: 'bg-gonulluluk-pattern',
-        4: 'bg-saglik-pattern',
-        5: 'bg-beslenme-pattern',
-        6: 'bg-uyku-pattern',
-        7: 'bg-digital-pattern'
+    const newUser = {
+        id: Date.now().toString(),
+        username: username,
+        password: simpleHash(password),
+        displayName: displayName,
+        birthDate: birthDate,
+        avatar: regState.avatar || (regState.gender === 'girl' ? '👧' : '👦'), // Use selected avatar, fallback to gender emoji
+        avatarBg: regState.avatarBg || '#D6E4FF', // Use selected avatarBg, fallback to default
+        bio: '',
+        stars: 0,
+        xp: 0,
+        level: 1,
+        stats: { power: 1, speed: 1, intel: 1 },
+        gender: regState.gender,
+        lastLogin: new Date().toISOString().split('T')[0],
+        streak: 1,
+        createdAt: new Date().toISOString().split('T')[0]
     };
 
-    const bgClass = patternClasses[theme.id] || 'bg-pastelBg';
-    document.body.className = `${bgClass} h-screen flex flex-col items-center overflow-hidden`;
-    document.body.style.removeProperty('--bg-img');
+    users.push(newUser);
+    saveAllUsers(users);
+    setActiveUserId(newUser.id);
 
-    document.getElementById('theme-title').textContent = theme.title;
+    // Reset form
+    document.getElementById('reg-displayname').value = '';
+    document.getElementById('reg-username').value = '';
+    document.getElementById('reg-password').value = '';
+    document.getElementById('reg-birthdate').value = '';
+    regState = { avatar: '', avatarBg: '#D6E4FF', ageGroup: '', gender: '' };
+    document.getElementById('box-boy').style.borderColor = '#E8E8F0';
+    document.getElementById('box-boy').style.backgroundColor = 'transparent';
+    document.getElementById('box-girl').style.borderColor = '#E8E8F0';
+    document.getElementById('box-girl').style.backgroundColor = 'transparent';
+    document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
 
-    // Açık renkli temalarda siyah, koyu renkli Dijital Denge temasında beyaz scrollbar
-    const scrollContainer = document.getElementById('map-scroll-container');
-    if (scrollContainer) {
-        if (theme.id === 7) {
-            scrollContainer.classList.remove('custom-scrollbar-dark');
-            scrollContainer.classList.add('custom-scrollbar');
-        } else {
-            scrollContainer.classList.remove('custom-scrollbar');
-            scrollContainer.classList.add('custom-scrollbar-dark');
-        }
-    }
+    showToast('Hoş geldin, ' + displayName + '! 🎉', 'success');
+    navigateTo('home');
+}
 
-    const mapContainer = document.getElementById('map-container');
-    mapContainer.innerHTML = '';
+// ─── AUTH: LOGIN ───────────────────────────────────────
+function doLogin() {
+    const username = document.getElementById('login-username').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
 
-    const levels = theme.levels || [];
-
-    if (levels.length === 0) {
-        const empty = document.createElement('p');
-        empty.className = 'text-gray-500 font-bold mt-10 bg-white p-4 flex items-center justify-center rounded-3xl z-10 mx-auto';
-        empty.textContent = 'Bu bölüm yapım aşamasında 🛠️';
-        mapContainer.appendChild(empty);
+    if (!username || !password) {
+        showToast('Kullanıcı adı ve şifre gerekli!', 'error');
         return;
     }
 
-    levels.forEach((level, idx) => {
-        const node = document.createElement('div');
-        // Zikzak etkisi için daha belirgin (daha uzağa giden) translateY
-        const isTop = idx % 2 === 0;
-        const translateY = isTop ? '-65%' : '65%';
+    const users = getAllUsers();
+    const user = users.find(u => u.username === username);
 
-        node.className = `flex flex-col items-center justify-center relative z-10 min-w-[120px] snap-center`;
-
-        const btnWrapper = document.createElement('div');
-        btnWrapper.className = 'flex flex-col items-center relative z-20';
-        btnWrapper.style.transform = `translateY(${translateY})`;
-
-        const btn = document.createElement('button');
-        if (level.isLocked) {
-            btn.className = 'w-24 h-24 rounded-full bg-slate-200 border-[6px] border-gray-300 shadow-md flex items-center justify-center cursor-not-allowed relative overflow-hidden';
-            // Arkada flu level numarası, önde kilit
-            btn.innerHTML = `<span class="absolute text-5xl font-extrabold text-gray-400 opacity-20">${idx + 1}</span><span class="relative z-10 text-4xl drop-shadow-sm pb-1">🔒</span>`;
-        } else {
-            // Her tema için uyumlu buton ve sınır renkleri
-            const themeColors = {
-                1: { bg: 'bg-pastelPink', border: 'border-pastelPinkDark', shadow: 'shadow-[0_6px_0_0_#FFAFCC]' }, // Pembe/Mor
-                2: { bg: 'bg-pastelYellow', border: 'border-[#F4A261]', shadow: 'shadow-[0_6px_0_0_#E76F51]' }, // Turuncu/Sarı
-                3: { bg: 'bg-[#95D5B2]', border: 'border-[#52B788]', shadow: 'shadow-[0_6px_0_0_#40916C]' }, // Yeşil
-                4: { bg: 'bg-[#A2D2FF]', border: 'border-[#429EBD]', shadow: 'shadow-[0_6px_0_0_#2B7A9B]' }, // Açık Mavi
-                5: { bg: 'bg-[#FFCAD4]', border: 'border-[#F28482]', shadow: 'shadow-[0_6px_0_0_#E56B6F]' }, // Şeftali
-                6: { bg: 'bg-[#CDB4DB]', border: 'border-[#B298DC]', shadow: 'shadow-[0_6px_0_0_#A06CD5]' }, // Lila/Gece
-                7: { bg: 'bg-pastelBlue', border: 'border-pastelBlueDark', shadow: 'shadow-[0_6px_0_0_#A2D2FF]' } // Dijital
-            };
-
-            const tCol = themeColors[theme.id] || { bg: 'bg-pastelYellow', border: 'border-pastelPinkDark', shadow: 'shadow-[0_6px_0_0_#FFAFCC]' };
-            const btnColor = tCol.bg;
-            const borderColors = `${tCol.border} ${tCol.shadow}`;
-
-            btn.className = `w-28 h-28 rounded-full ${btnColor} border-8 ${borderColors} text-5xl font-extrabold text-gray-800 flex items-center justify-center hover:scale-110 active:scale-95 transition-all`;
-            btn.textContent = idx + 1;
-        }
-
-        // Animasyon için özel bir id veriyoruz ki daha sonra bulabilelim
-        btn.id = `level-btn-${level.id}`;
-
-        btn.onclick = () => {
-            if (!level.isLocked) {
-                showQuiz(theme.id, level.id);
-            }
-        };
-
-        btnWrapper.appendChild(btn);
-        node.appendChild(btnWrapper);
-
-        // Zikzak çizgileri
-        if (idx < levels.length - 1) {
-            // Eğer diğer bölüm de açıksa şerit altın sarısı olacak
-            const isCompleted = !levels[idx + 1].isLocked;
-            drawHorizontalZigzagLine(node, isTop, isCompleted);
-        }
-
-        mapContainer.appendChild(node);
-    });
-
-    // Eğer bitirilmiş bir oyun animasyonu bekliyorsa çalıştır
-    if (pendingStarLevelId) {
-        animateStar(pendingStarLevelId);
-        pendingStarLevelId = null; // Sıfırla
+    if (!user || user.password !== simpleHash(password)) {
+        showToast('Kullanıcı adı veya şifre hatalı!', 'error');
+        return;
     }
+
+    setActiveUserId(user.id);
+
+    // Clear form
+    document.getElementById('login-username').value = '';
+    document.getElementById('login-password').value = '';
+
+    showToast('Tekrar hoş geldin, ' + user.displayName + '! 🚀', 'success');
+    navigateTo('home');
 }
 
-// ----------------------------------------------------
-// Yıldız Uçurma Animasyonu
-// ----------------------------------------------------
-function animateStar(levelId) {
-    const originBtn = document.getElementById(`level-btn-${levelId}`);
-    const targetElement = document.querySelector('.bg-pastelYellow'); // İçinde yıldız olan sarı sayaç kutusu
+// ─── AUTH: LOGOUT ──────────────────────────────────────
+function doLogout() {
+    setActiveUserId(null);
+    showToast('Çıkış yapıldı 👋');
+    navigateTo('login');
+}
 
-    if (!originBtn || !targetElement) return;
+// ─── RENDER: HOME ──────────────────────────────────────
+function renderHome() {
+    const user = getActiveUser();
+    if (!user) { navigateTo('login'); return; }
 
-    // Hedef ve Kaynak koordinatlarını al
-    const originRect = originBtn.getBoundingClientRect();
-    const targetRect = targetElement.getBoundingClientRect();
+    const nameEl = document.getElementById('home-displayname');
+    if (nameEl) nameEl.textContent = user.displayName;
 
-    // Yıldızı yarat
-    const flyingStar = document.createElement('div');
-    flyingStar.textContent = '⭐';
-    flyingStar.className = 'fixed z-[9999] text-6xl drop-shadow-xl animate-flying-star pointer-events-none';
+    const navAvatarEl = document.getElementById('home-avatar');
+    if (navAvatarEl) {
+        navAvatarEl.textContent = user.avatar;
+        navAvatarEl.style.background = user.avatarBg;
+    }
 
-    // Başlangıç pozisyonu (Butonun tam ortası)
-    const startX = originRect.left + (originRect.width / 2) - 30; // 30 = yarım boyut tahmini
-    const startY = originRect.top + (originRect.height / 2) - 30;
+    const starsEl = document.getElementById('home-stars');
+    if (starsEl) starsEl.textContent = user.stars || 0;
 
-    flyingStar.style.left = `${startX}px`;
-    flyingStar.style.top = `${startY}px`;
+    // Update bottom navbar icon based on gender
+    const navProfileIcon = document.getElementById('navbar-profile-icon');
+    if (navProfileIcon) {
+        navProfileIcon.textContent = user.gender === 'girl' ? '👧' : '👦';
+    }
 
-    // Uçuş Mesafesi (Hedef Header'daki yıldız ikonunun kordinatına göre)
-    const targetX = targetRect.left + 20; // 20px padding tahmini
-    const targetY = targetRect.top + 10;
+    // Level & XP
+    const level = Math.floor((user.xp || 0) / 100) + 1;
+    const xpInLevel = (user.xp || 0) % 100;
+    const levelEl = document.getElementById('user-level');
+    if (levelEl) levelEl.textContent = `Seviye ${level}`;
+    const xpEl = document.getElementById('user-xp');
+    if (xpEl) xpEl.textContent = xpInLevel;
+    const xpFill = document.getElementById('xp-fill');
+    if (xpFill) xpFill.style.width = `${xpInLevel}%`;
 
-    const tx = targetX - startX;
-    const ty = targetY - startY;
+    // Stats
+    const pEl = document.getElementById('stat-power');
+    if (pEl) pEl.textContent = user.stats?.power || 1;
+    const sEl = document.getElementById('stat-speed');
+    if (sEl) sEl.textContent = user.stats?.speed || 1;
+    const iEl = document.getElementById('stat-intel');
+    if (iEl) iEl.textContent = user.stats?.intel || 1;
 
-    flyingStar.style.setProperty('--tx', `${tx}px`);
-    flyingStar.style.setProperty('--ty', `${ty}px`);
+    // Reset Hero Position
+    const hero = document.getElementById('main-hero');
+    if (hero) {
+        hero.style.left = '50%';
+        hero.style.top = '50%';
+        hero.style.transform = 'translate(-50%, -50%)';
+    }
 
-    document.body.appendChild(flyingStar);
+    renderHeroHub(user);
+}
 
-    // Animasyon bitiminde olacaklar (1s animasyon süresi atamıştık)
+function renderHeroHub(user) {
+    const wrapper = document.getElementById('hub-modules-wrapper');
+    if (!wrapper) return;
+    wrapper.innerHTML = '';
+
+    const age = calculateAge(user.birthDate);
+    const ageGroup = getAgeGroupFromAge(age);
+
+    // Position modules in a circle (Dynamic Radius for mobile)
+    const containerWidth = document.querySelector('.hero-hub-container')?.offsetWidth || 360;
+    const radius = Math.min(containerWidth / 2.6, 140);
+
+    const hubModules = [...modulesData];
+
+    hubModules.forEach((mod, i) => {
+        const angle = (i * (360 / hubModules.length) - 90) * (Math.PI / 180);
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+
+        const btn = document.createElement('div');
+        btn.className = 'hub-module';
+
+        // İyileşme (eski Akademi) modülüne özel renk verilebilir
+        if (mod.id === 'iyilesme') btn.style.background = 'rgba(255, 215, 0, 0.9)';
+
+        btn.style.left = `calc(50% + ${x}px - 40px)`;
+        btn.style.top = `calc(50% + ${y}px - 40px)`;
+        btn.style.animationDelay = `${i * 0.1}s`;
+
+        btn.innerHTML = `
+            <div class="hm-icon">${mod.icon}</div>
+            <div class="hm-label">${mod.title}</div>
+        `;
+
+        btn.onclick = (e) => {
+            moveHeroAndNavigate(mod.id, x, y);
+        };
+        wrapper.appendChild(btn);
+    });
+}
+
+function moveHeroAndNavigate(moduleId, x, y) {
+    const hero = document.getElementById('main-hero');
+    if (!hero) return;
+
+    // Move hero to module
+    hero.style.left = `calc(50% + ${x}px)`;
+    hero.style.top = `calc(50% + ${y}px)`;
+    hero.style.transform = 'translate(-50%, -50%) scale(1.2)';
+
+    // Wait for animation then navigate
     setTimeout(() => {
-        flyingStar.remove();
-        // Sayaca "pıt" efekti ver
-        targetElement.classList.add('scale-125');
-        setTimeout(() => {
-            targetElement.classList.remove('scale-125');
-        }, 200);
-    }, 1000);
-}
-
-function drawHorizontalZigzagLine(parentNode, isTopToBottom, isCompleted) {
-    // Görsel amaçlı yatay bağlayıcı çizgi
-    const svgContainer = document.createElement('div');
-    // Kutucuklar arası boşluk (gap-28 = 112px, btn = 112px => Merkezden merkeze ~ 224px).
-    // Yükseklik translateY +- 65% civarı, node yüksekliğine bağlı. 160px yükseklik tam kurtarıyor.
-    // md:w gibi dinamik sınıflar çizgiyi kaydırdığı için w-[240px] gibi sabit bir uzunluk, sabit h kullanıyoruz.
-    svgContainer.className = 'absolute left-[50%] top-[45%] w-[240px] h-[180px] -z-10 pointer-events-none transform -translate-y-1/2 flex items-center opacity-80';
-
-    // Tombul Çizgiler ve Renk Ayarı (Daha soft pastel renklerle)
-    const strokeColor = isCompleted ? '#FEF08A' : '#BAE6FD'; // Soft Pastel Altın Sarı / Soft Pastel Mavi
-    const strokeWidth = 14;  // Biraz daha yumuşak kenar
-    // Yapı Bütünselliği: Düğüm (kesik çizgi) yapısı ASLA bozulmasın, sadece renk değişsin.
-    const dashArray = '12 20'; // Çizgiler arası boşluklar genişledi (softlaşma)
-
-    // filter: drop-shadow eklendi ki kenarlar glow (soft) efekti versin
-    // the "path" starts from center of current button (which is relatively 0, y depending on top/bottom) 
-    // to the center of next button.
-    const svgPath = isTopToBottom
-        ? `<svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" style="filter: drop-shadow(0px 3px 4px rgba(0,0,0,0.06)); overflow:visible;"><path d="M 0 15 L 100 85" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="${dashArray}" stroke-linecap="round" fill="none"/></svg>`
-        : `<svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" style="filter: drop-shadow(0px 3px 4px rgba(0,0,0,0.06)); overflow:visible;"><path d="M 0 85 L 100 15" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="${dashArray}" stroke-linecap="round" fill="none"/></svg>`;
-
-    svgContainer.innerHTML = svgPath;
-    parentNode.appendChild(svgContainer);
-}
-
-// ----------------------------------------------------
-// Quiz / Oyun Ortamı
-// ----------------------------------------------------
-let matchingState = { selectedLeft: null, selectedRight: null, matchedCount: 0, totalPairs: 0 };
-
-// Helper for Dynamic Age Content
-function getAgeSpecificContent(level) {
-    let contentKey = 'content_2_5'; // default
-    if (userProgress.ageGroup === '6-8') contentKey = 'content_6_8';
-    if (userProgress.ageGroup === '9+') contentKey = 'content_9_plus';
-
-    // Geçiş dönemi: Eski veri yapısı gelirse veya o yaş grubuna özel veri yoksa mevcutu döndür
-    if (!level[contentKey]) return level;
-
-    // Kilit durumu ve temel bilgileri yaş grubu içeriğiyle birleştirip düzleştir (flatten)
-    return { ...level, ...level[contentKey] };
-}
-
-function showQuiz(themeId, levelId) {
-    currentThemeId = themeId;
-    currentLevelId = levelId;
-
-    hideAllViews();
-    quizView.classList.remove('hidden');
-    quizView.classList.add('flex');
-
-    const theme = userProgress.themes.find(t => t.id === themeId);
-    const baseLevel = theme.levels.find(l => String(l.id) === String(levelId));
-
-    // Kullanıcının seçtiği yaş grubuna göre düzleştirilmiş seviye verisini al
-    const level = getAgeSpecificContent(baseLevel);
-
-    document.getElementById('level-indicator').textContent = levelId;
-
-    const questionTitle = document.getElementById('question-text');
-    const optionsContainer = document.getElementById('options-container');
-    const matchingContainer = document.getElementById('matching-container');
-
-    optionsContainer.innerHTML = '';
-
-    // 2-5 yaş için soru metni gösterilmez. Sadece görseller.
-    if (userProgress.ageGroup === '2-5') {
-        questionTitle.classList.add('hidden');
-    } else {
-        questionTitle.classList.remove('hidden');
-    }
-
-    if (level.gameType === 'matching') {
-        if (userProgress.ageGroup !== '2-5') questionTitle.textContent = level.question || "Eşleştirme Zamanı!";
-        optionsContainer.classList.add('hidden');
-        document.getElementById('sorting-container').classList.add('hidden');
-        matchingContainer.classList.remove('hidden');
-        renderMatchingGame(level);
-    } else if (level.gameType === 'sorting') {
-        if (userProgress.ageGroup !== '2-5') questionTitle.textContent = level.question;
-        optionsContainer.classList.add('hidden');
-        matchingContainer.classList.add('hidden');
-        const sortingContainer = document.getElementById('sorting-container');
-        if (sortingContainer) sortingContainer.classList.remove('hidden');
-        renderSortingGame(level);
-    } else {
-        if (userProgress.ageGroup !== '2-5') questionTitle.textContent = level.question;
-        matchingContainer.classList.add('hidden');
-        document.getElementById('sorting-container').classList.add('hidden');
-        optionsContainer.classList.remove('hidden');
-        renderQuizGame(level, optionsContainer);
-    }
-}
-
-// ----------------------------------------------------
-// Klasik Quiz Oyunu (2-10 Yaş Hibrit UI)
-// ----------------------------------------------------
-function renderQuizGame(level, container) {
-    // 2-10 yaş için şıkları alt alta geniş veya yan yana (ekrana göre) alıyoruz
-    container.className = 'flex flex-col gap-4 w-full h-full mt-4';
-
-    level.options.forEach(opt => {
-        const btn = document.createElement('button');
-        // Eğer veri tabanından text gelmediyse (Örn: 2-5 Yaş Grubu seçimi) sadece Emoji/İkon dev boyutta basılacak.
-        if (!opt.text) {
-            btn.className = 'w-full h-auto min-h-[160px] bg-white border-8 border-gray-100 rounded-[30px] p-4 shadow-sm hover:border-pastelBlue hover:scale-[1.02] transition-all flex items-center justify-center active:scale-95';
-            btn.innerHTML = `<span class="text-[6rem] sm:text-[8rem] drop-shadow-md bg-pastelBg rounded-3xl p-6">${opt.image}</span>`;
+        if (moduleId === 'academy') {
+            navigateTo('academy');
         } else {
-            // Hibrit ve 9+ yaş için klasik Icon + Text düzeni
-            btn.className = 'w-full bg-white border-8 border-gray-100 rounded-[30px] p-4 shadow-sm hover:border-pastelBlue hover:scale-[1.02] transition-all flex items-center justify-start gap-6 active:scale-95 text-left';
-            btn.innerHTML = `
-                <span class="text-[4rem] sm:text-[5rem] drop-shadow-md shrink-0 bg-pastelBg rounded-3xl p-2">${opt.image}</span>
-                <span class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-700 leading-tight">${opt.text}</span>
+            showModuleDetail(moduleId);
+        }
+    }, 600);
+}
+
+let globalCurrentModule = null;
+
+// ─── RENDER: MODULE DETAIL (LEVEL MAP) ─────────────────
+function showModuleDetail(moduleId) {
+    const user = getActiveUser();
+    if (!user) return;
+
+    const mod = modulesData.find(m => m.id === moduleId);
+    if (!mod) return;
+
+    globalCurrentModule = moduleId;
+
+    // Faz 6 / Faz 8: İlk açılışta modül verisini hazırlıyoruz.
+    // heroMode'da olsak bile harita için `completedLevels` array'ine ihtiyaç var.
+    if (!user.pets) user.pets = {};
+    if (!user.pets[moduleId]) {
+        user.pets[moduleId] = { food: 5, happiness: 0, completedLevels: [] };
+        updateUser(user);
+    }
+
+    const petData = user.pets[moduleId];
+
+    // Header
+    const header = document.getElementById('module-detail-header');
+    header.style.background = mod.colorDark;
+    document.getElementById('module-detail-title').textContent = mod.title;
+    document.getElementById('module-detail-desc').textContent = mod.description;
+    document.getElementById('module-detail-icon').textContent = mod.icon;
+
+    // Panel Geçişi (Pet vs Hero)
+    const petPanel = document.getElementById('pet-panel-ui');
+    const heroPanel = document.getElementById('hero-panel-ui');
+
+    if (mod.heroMode) {
+        petPanel.classList.add('hidden');
+        heroPanel.classList.remove('hidden');
+
+        // Hero Init
+        if (!user.health) user.health = 20; // Başlangıç sağlığı (Örn: %20)
+
+        document.getElementById('hero-panel-emoji').textContent = user.avatar;
+        document.getElementById('hero-panel-name').textContent = user.displayName;
+        document.getElementById('hero-health-fill').style.width = `${user.health}%`;
+
+        const heroStatus = document.getElementById('hero-panel-status');
+        // Kullanıcının "Öğrenim Durumu" için metin yerine görsel/icon (emoji) bırakıyoruz.
+        if (user.health >= 80) heroStatus.innerHTML = '<span style="font-size:1.2rem;">🎓</span>';
+        else if (user.health >= 50) heroStatus.innerHTML = '<span style="font-size:1.2rem;">📚</span>';
+        else heroStatus.innerHTML = '<span style="font-size:1.2rem;">📖</span>';
+
+    } else {
+        petPanel.classList.remove('hidden');
+        heroPanel.classList.add('hidden');
+
+        // Pet UI
+        document.getElementById('pet-emoji').textContent = mod.pet.emoji;
+        document.getElementById('pet-name').textContent = mod.pet.name;
+        document.getElementById('pet-food-icon').textContent = mod.pet.foodIcon;
+        document.getElementById('pet-food-amount').textContent = petData.food;
+        document.getElementById('pet-happiness-fill').style.width = `${petData.happiness}%`;
+
+        const statusEl = document.getElementById('pet-status');
+        if (petData.happiness > 50) {
+            statusEl.textContent = 'Mutlu! 🥰';
+        } else if (petData.happiness > 0) {
+            statusEl.textContent = 'Uyanık! 👀';
+        } else {
+            statusEl.textContent = 'Zzz... 😴';
+        }
+
+        const feedBtn = document.getElementById('feed-pet-btn');
+        feedBtn.disabled = petData.food <= 0 || petData.happiness >= 100;
+    }
+
+    // Level Map
+    const mapContainer = document.getElementById('level-map-container');
+    mapContainer.innerHTML = ''; // Temizle
+
+    // Dinamik kıvrımlı SVG yolu oluşturma
+    // Her bir düğüm (node) yaklaşık 120px dikey yer kaplayacak
+    const nodeHeight = 120;
+    const totalHeight = mod.levels.length * nodeHeight;
+    let pathD = `M 50 0 `;
+
+    for (let i = 0; i < mod.levels.length; i++) {
+        const startY = i * nodeHeight;
+        const endY = (i + 1) * nodeHeight;
+        // Çift/Tek index'e göre sağa veya sola doğru kıvrım ver
+        const controlX = i % 2 === 0 ? 90 : 10;
+        pathD += `C ${controlX} ${startY + nodeHeight / 3}, ${controlX} ${endY - nodeHeight / 3}, 50 ${endY} `;
+    }
+
+    const svgHTML = `
+    <svg class="level-path-svg" viewBox="0 0 100 ${totalHeight}" preserveAspectRatio="none" style="height: ${totalHeight}px;">
+        <path fill="transparent" stroke="${mod.colorDark}" stroke-opacity="0.3" d="${pathD}" class="animated"></path>
+    </svg>`;
+    mapContainer.innerHTML = svgHTML;
+
+    // Petin (Maskot) haritadaki pozisyonu bulacağız
+    let petPlaced = false;
+
+    mod.levels.forEach((lvl, index) => {
+        const completedLevels = petData?.completedLevels || [];
+        const isCompleted = completedLevels.includes(lvl.id);
+        const isNext = !isCompleted && (index === 0 || completedLevels.includes(mod.levels[index - 1].id));
+        const isLocked = !isCompleted && !isNext;
+
+        let nodeClass = 'level-node';
+        let icon = '⭐';
+        if (isLocked) {
+            nodeClass += ' locked';
+            icon = '🔒';
+        } else if (isCompleted) {
+            nodeClass += ' completed';
+            icon = '✔️';
+        } else if (isNext) {
+            nodeClass += ' active anim-pop';
+            icon = lvl.type === 'quiz' ? '❓' : '💡';
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'level-node-wrapper anim-fade-up';
+        wrapper.style.animationDelay = `${(index % 5) * 0.1}s`; // Stagger animation
+
+        // Maskot/Hero yerleşimi için bilgileri ayır, mapContainer'a ayrı ekleyeceğiz
+        if (isNext && !petPlaced) {
+            petPlaced = true;
+
+            const petTop = (index * 120);
+            const petLeft = index % 2 === 0 ? '70%' : '30%';
+
+            const petMarker = document.createElement('div');
+            petMarker.className = 'map-pet anim-pop';
+            petMarker.id = 'active-map-pet';
+            petMarker.style.top = `calc(${petTop}px - 20px)`;
+            petMarker.style.left = `calc(${petLeft} - 25px)`;
+
+            const avatarEmoji = mod.heroMode ? user.avatar : mod.pet.emoji;
+
+            petMarker.innerHTML = `
+                <div class="map-pet-emoji">${avatarEmoji}</div>
+                <div class="map-pet-tooltip">Buradayım!</div>
             `;
+            setTimeout(() => mapContainer.appendChild(petMarker), 10);
         }
 
-        btn.onclick = () => {
-            handleAnswer(opt.isCorrect, false);
-        };
-        container.appendChild(btn);
-    });
-}
+        const iconLabel = mod.heroMode ? 'Sağlık' : mod.pet.foodIcon;
 
-// ----------------------------------------------------
-// Eşleştirme Oyunu
-// ----------------------------------------------------
-function renderMatchingGame(level) {
-    const leftContainer = document.getElementById('match-left');
-    const rightContainer = document.getElementById('match-right');
-    leftContainer.innerHTML = '';
-    rightContainer.innerHTML = '';
-
-    matchingState = { selectedLeft: null, selectedRight: null, matchedCount: 0, totalPairs: level.pairs.length };
-
-    // Randomize the arrays to display out of order
-    const leftItems = [...level.pairs].sort(() => Math.random() - 0.5);
-    const rightItems = [...level.pairs].sort(() => Math.random() - 0.5);
-
-    leftItems.forEach(item => {
-        const btn = document.createElement('button');
-        btn.className = 'match-btn w-full min-h-[100px] bg-white border-4 border-gray-200 text-6xl rounded-2xl shadow-sm transition-all flex items-center justify-center py-2';
-        // Tablet vs SVG ikon desteği
-        if (item.image.includes('<svg')) {
-            btn.innerHTML = item.image;
-        } else {
-            btn.textContent = item.image;
-        }
-        btn.dataset.id = item.id;
-        btn.onclick = () => handleMatchClick('left', btn, item.id);
-        leftContainer.appendChild(btn);
+        wrapper.innerHTML = `
+            <div class="${nodeClass}" onclick="${isLocked || isCompleted ? '' : `handleLevelClick('${moduleId}', ${lvl.id}, '${lvl.type}', ${lvl.xp}, ${lvl.targetFood})`}">
+                <div class="level-node-icon">${icon}</div>
+                <div class="level-node-stars">+${lvl.xp} XP | +${lvl.targetFood} ${iconLabel}</div>
+            </div>
+            <div style="position:absolute; top:30%; ${index % 2 === 0 ? 'right:5%' : 'left:5%'}; font-weight:800; font-size:0.8rem; color: #666; width: 35%; text-align: ${index % 2 === 0 ? 'right' : 'left'};">
+                ${lvl.title}
+            </div>
+        `;
+        mapContainer.appendChild(wrapper);
     });
 
-    rightItems.forEach(item => {
-        const btn = document.createElement('button');
-        // Hibrit Yaş (2-10): Metinler geri geldi, okunaklı, kalın ve kısa
-        btn.className = 'match-btn w-full min-h-[100px] h-auto bg-white border-4 border-gray-200 font-extrabold text-gray-700 rounded-2xl shadow-sm transition-all flex items-center justify-center text-center leading-snug p-3 text-lg sm:text-2xl break-words whitespace-normal';
-        btn.textContent = item.name;
-        btn.dataset.id = item.id;
-        btn.onclick = () => handleMatchClick('right', btn, item.id);
-        rightContainer.appendChild(btn);
-    });
-}
-
-function handleMatchClick(side, element, id) {
-    if (element.classList.contains('matched')) return; // Zaten eşleşmiş
-
-    // Önceden seçilmişleri temizle (Sadece aynı taraftakileri)
-    const siblings = element.parentElement.children;
-    for (let el of siblings) {
-        if (!el.classList.contains('matched')) {
-            el.classList.remove('selected');
+    // Eğer hepsi bittiyse maskotu son node'a koy
+    if (!petPlaced && mod.levels.length > 0) {
+        const lastWrapper = mapContainer.lastElementChild;
+        if (lastWrapper) {
+            const avatarEmoji = mod.heroMode ? user.avatar : mod.pet.emoji;
+            lastWrapper.insertAdjacentHTML('afterbegin', `<div class="map-pet anim-pop"><div class="map-pet-emoji">${avatarEmoji}</div></div>`);
         }
     }
-    element.classList.add('selected');
 
-    // Durumu güncelle
-    if (side === 'left') {
-        matchingState.selectedLeft = { element, id };
+    navigateTo('module-detail');
+}
+
+// ─── PET FEEDING & LEVEL LOGIC ─────────────────────────────
+function handleLevelClick(moduleId, levelId, levelType, xpAmount, foodAmount) {
+    const user = getActiveUser();
+    if (!user) return;
+
+    const mod = modulesData.find(m => m.id === moduleId);
+    const petData = user.pets ? user.pets[moduleId] : null;
+
+    // Faz 6: Yem / Mutluluk Şartı (Pet Açsa Level Oynanamaz)
+    // Eğer heroMode aktifse bu kontrolü atla
+    if (!mod.heroMode && petData && petData.happiness < 20) {
+        showToast("🐾 Önce dostunu beslemelisin!", "error");
+
+        // Sadece küçük bir sarsıntı efekti verelim
+        const petPanel = document.querySelector('.pet-panel');
+        if (petPanel) {
+            petPanel.style.transform = "translateX(10px)";
+            setTimeout(() => petPanel.style.transform = "translateX(-10px)", 100);
+            setTimeout(() => petPanel.style.transform = "translateX(10px)", 200);
+            setTimeout(() => petPanel.style.transform = "translateX(0)", 300);
+        }
+        return;
+    }
+
+    if (levelType === 'drag-drop') {
+        openMiniGame(moduleId, levelId, xpAmount, foodAmount);
     } else {
-        matchingState.selectedRight = { element, id };
-    }
-
-    // İki taraf da seçildiyse kontrol et
-    if (matchingState.selectedLeft && matchingState.selectedRight) {
-        if (matchingState.selectedLeft.id === matchingState.selectedRight.id) {
-            // Eşleşti
-            matchingState.selectedLeft.element.classList.remove('selected');
-            matchingState.selectedRight.element.classList.remove('selected');
-            matchingState.selectedLeft.element.classList.add('matched');
-            matchingState.selectedRight.element.classList.add('matched');
-
-            matchingState.matchedCount++;
-
-            // Seçimleri sıfırla
-            matchingState.selectedLeft = null;
-            matchingState.selectedRight = null;
-
-            // Oyun Bitti mi?
-            if (matchingState.matchedCount === matchingState.totalPairs) {
-                setTimeout(() => {
-                    const isDigitalTheme = currentThemeId === 7;
-                    let modalMessage = 'Bölümü başarıyla tamamladın!';
-
-                    if (isDigitalTheme) {
-                        modalMessage = `
-                        <div class="flex flex-col items-center justify-center text-center px-2 py-4">
-                            <!-- Local klasöre kopyalanmış resmi kullanıyoruz -->
-                            <img src="./assets/digital_benefits.png" alt="Dijital Aletler" class="w-[280px] h-[280px] object-cover rounded-3xl shadow-md mb-6 border-[10px] border-pastelYellow">
-                            <p class="text-3xl text-gray-800 leading-tight font-extrabold mb-4">
-                                Harika Bir İş Çıkardın! 🎉
-                            </p>
-                            <p class="text-xl font-bold text-gray-600 bg-gray-50 p-4 rounded-2xl border-2 border-gray-200">
-                                Tablet ve telefonlar yeni şeyler öğrenmen için <b>süper yardımcılarındır!</b> Süresi bitince dinlenmeyi unutma! 🦸‍♂️📱
-                            </p>
-                        </div>
-                    `;
-                    } else if (currentThemeId === 1 && currentLevelId === 1) { // Süper Kahraman Ekibim
-                        modalMessage = `
-                        <div class="flex flex-col items-center justify-center text-center px-2 py-4">
-                            <p class="text-3xl text-gray-800 leading-tight font-extrabold mb-4 mt-2">
-                                Süper Ekibi Tanıdın! 🦸‍♀️🦸‍♂️
-                            </p>
-                            <p class="text-xl font-bold text-gray-600 bg-blue-50 p-4 rounded-2xl border-2 border-blue-200">
-                                Hastanedeki doktorlar ve hemşireler senin <b>süper kahraman ekibindir!</b> Birlikte harikasınız! 🤝
-                            </p>
-                        </div>
-                    `;
-                    } else if (currentThemeId === 1 && currentLevelId === 2) { // Doktorların Sihirli Aletleri
-                        modalMessage = `
-                        <div class="flex flex-col items-center justify-center text-center px-2 py-4">
-                            <p class="text-3xl text-gray-800 leading-tight font-extrabold mb-4 mt-2">
-                                Süper Aletleri Öğrendin! 🩺✨
-                            </p>
-                            <p class="text-xl font-bold text-gray-600 bg-green-50 p-4 rounded-2xl border-2 border-green-200">
-                                Aletlerden korkmana gerek yok! Hepsi seni iyileştiren ve <b>kalbini dinleyen özel sihirli araçlardır!</b> 🌟
-                            </p>
-                        </div>
-                    `;
-                    } else if (currentThemeId === 4 && currentLevelId === 4) { // Uzay Cihazları (MR, Röntgen)
-                        modalMessage = `
-                        <div class="flex flex-col items-center justify-center text-center px-2 py-4">
-                            <p class="text-3xl text-gray-800 leading-tight font-extrabold mb-4 mt-2">
-                                Uzay Cihazları Dedektifi! 🧲🚀
-                            </p>
-                            <p class="text-xl font-bold text-gray-600 bg-blue-50 p-4 rounded-2xl border-2 border-blue-200">
-                                Gürültülü MR makineleri aslında içimizi kontrol eden <b>dost canlısı uzay gemileridir!</b> Kahramanlar sesten korkmaz! 🛡️
-                            </p>
-                        </div>
-                    `;
-                    } else if (currentThemeId === 7 && currentLevelId === '1') { // Uzay Odam 
-                        modalMessage = `
-                        <div class="flex flex-col items-center justify-center text-center px-2 py-4">
-                            <p class="text-3xl text-gray-800 leading-tight font-extrabold mb-4 mt-2">
-                                Uzay Odanı Keşfettin! 🚀🎨
-                            </p>
-                            <p class="text-xl font-bold text-gray-600 bg-purple-50 p-4 rounded-2xl border-2 border-purple-200">
-                                Hastanedeki odan senin <b>hayal uzayındır!</b> Sadece tabletle kalma, bol bol resim çizip kitap oku! 🎨📖
-                            </p>
-                        </div>
-                    `;
-                    }
-
-                    // Skoru vb kaydet, bir sonraki leveli aç (ama yıldızı burada animasyonsuz update ediyor addStar. Animasyon haritada olacak)
-                    handleAnswer(true, true);
-
-                    showModal('Tebrikler!', modalMessage, 'Haritaya Dön 🚀', true, '🎉', () => {
-                        // Modal butona tıklanınca Tema haritasına dönsün ve animasyon başlasın
-                        pendingStarLevelId = currentLevelId; // Hangi levelelın içindeydik onu kaydediyoruz
-                        showThemeMap(currentThemeId);
-                        closeModal();
-                    });
-                }, 500);
-            }
-        } else {
-            // Hatalı eşleşme, 500ms bekle ve sıfırla
-            const leftEl = matchingState.selectedLeft.element;
-            const rightEl = matchingState.selectedRight.element;
-
-            leftEl.classList.add('border-red-400', 'bg-red-50');
-            rightEl.classList.add('border-red-400', 'bg-red-50');
-
-            setTimeout(() => {
-                leftEl.classList.remove('selected', 'border-red-400', 'bg-red-50');
-                rightEl.classList.remove('selected', 'border-red-400', 'bg-red-50');
-            }, 600);
-
-            matchingState.selectedLeft = null;
-            matchingState.selectedRight = null;
-        }
+        completeLevel(moduleId, levelId, xpAmount, foodAmount);
     }
 }
 
-// Planting (Ağaç Dikme) oyunu kaldırıldı.
+function completeLevel(moduleId, levelId, xpAmount, foodAmount) {
+    const user = getActiveUser();
+    if (!user) return;
 
-// ----------------------------------------------------
-// Genelleştirilmiş Sınıflandırma (Sorting) Oyunu
-// ----------------------------------------------------
-function renderSortingGame(level) {
-    const sortingItemsContainer = document.getElementById('sorting-items');
-    const leftZone = document.getElementById('dropzone-healthy'); // ID'yi legacy bırakıp, logic değiştirildi
-    const rightZone = document.getElementById('dropzone-unhealthy');
+    const mod = modulesData.find(m => m.id === moduleId);
+    const intelStat = user.stats?.intel || 1;
+    const bonusXp = Math.floor(xpAmount * (1 + (intelStat * 0.1)));
 
-    const leftTitle = document.getElementById('dropzone-left-title');
-    const rightTitle = document.getElementById('dropzone-right-title');
+    // Grant XP and Food (Or Health)
+    user.xp = (user.xp || 0) + bonusXp;
 
-    // Dinamik başlık atama (data.js üzerinden gelecek)
-    if (userProgress.ageGroup === '2-5') {
-        if (leftTitle) leftTitle.classList.add('hidden');
-        if (rightTitle) rightTitle.classList.add('hidden');
+    if (mod.heroMode) {
+        // Kahraman modu ise sağlık kazan (Maximum 100)
+        user.health = Math.min(100, (user.health || 0) + foodAmount * 10);
     } else {
-        if (leftTitle && level.dropzones && level.dropzones.left) {
-            leftTitle.classList.remove('hidden');
-            leftTitle.textContent = level.dropzones.left.title;
-        }
-        if (rightTitle && level.dropzones && level.dropzones.right) {
-            rightTitle.classList.remove('hidden');
-            rightTitle.textContent = level.dropzones.right.title;
-        }
+        user.pets[moduleId].food += foodAmount;
     }
 
-    // Dropzone içerik kutularını al
-    const leftContent = leftZone.querySelector('.drop-content');
-    const rightContent = rightZone.querySelector('.drop-content');
+    user.pets[moduleId].completedLevels.push(levelId);
 
-    // Başlangıç ekranını temizle
-    sortingItemsContainer.innerHTML = '';
-    leftContent.innerHTML = '';
-    rightContent.innerHTML = '';
+    // Level up check
+    const newLevel = Math.floor(user.xp / 100) + 1;
+    if (newLevel > (user.level || 1)) {
+        user.level = newLevel;
+        showToast(`🎉 SEVİYE ${newLevel} OLDUN!`);
+    }
 
-    // Sürüklenen elementin referansı
-    let draggedElement = null;
-    let correctSortCount = 0;
-    const totalItems = level.items.length;
+    updateUser(user);
 
-    // Şıkları rastgele diz
-    const randomItems = [...level.items].sort(() => Math.random() - 0.5);
+    if (mod.heroMode) {
+        showToast(`+${bonusXp} XP ve +Sağlık Puanı kazandın!`);
+    } else {
+        showToast(`+${bonusXp} XP ve +${foodAmount} Yem kazandın!`);
+    }
 
-    randomItems.forEach(item => {
+    // Maskotu yavaşça bir sonraki node'a kaydır (Soft Transition)
+    const petElement = document.getElementById('active-map-pet');
+    const nodes = document.querySelectorAll('.level-node-wrapper');
+    const nextNodeIndex = user.pets[moduleId].completedLevels.length;
+
+    if (petElement && nextNodeIndex < nodes.length) {
+        petElement.style.transition = 'top 1s ease-in-out, left 1s ease-in-out';
+        const petTop = (nextNodeIndex * 120);
+        const petLeft = nextNodeIndex % 2 === 0 ? '70%' : '30%';
+
+        petElement.style.top = `calc(${petTop}px - 20px)`;
+        petElement.style.left = `calc(${petLeft} - 25px)`;
+
+        // 1 saniye sonra haritayı tam yenile
+        setTimeout(() => {
+            showModuleDetail(moduleId);
+        }, 1000);
+    } else {
+        // Maskot yoksa anında yenile
+        showModuleDetail(moduleId);
+    }
+}
+
+// ─── ETKİLEŞİMLİ MİNİ OYUN (DRAG & DROP - FAZ 7) ────────────
+let activeMiniGame = null;
+
+function openMiniGame(moduleId, levelId, xpAmount, foodAmount) {
+    const mod = modulesData.find(m => m.id === moduleId);
+    const lvl = mod.levels.find(l => l.id === levelId);
+    if (!mod || !lvl || !lvl.gameData) return;
+
+    activeMiniGame = {
+        moduleId, levelId, xpAmount, foodAmount,
+        energy: 0,
+        gameData: lvl.gameData,
+        petEmoji: mod.pet.emoji
+    };
+
+    // UI Setup
+    document.getElementById('minigame-title').textContent = lvl.title;
+    document.getElementById('minigame-instruction').textContent = lvl.gameData.heroTitle || 'Beni Besle!';
+
+    // Eğer oyuna özel bir hedef emoji varsa onu kullan, yoksa avatar/pet emojisi.
+    const avatarEmoji = lvl.gameData.targetEmoji || (mod.heroMode ? getActiveUser().avatar : mod.pet.emoji);
+    document.querySelector('.hero-avatar-large').textContent = avatarEmoji;
+
+    // Reset Energy & Feedback
+    document.getElementById('minigame-energy').style.width = '0%';
+    document.getElementById('minigame-energy').style.backgroundColor = 'var(--success)';
+    document.getElementById('minigame-feedback').classList.add('hidden');
+    document.getElementById('feedback-continue-btn').classList.add('hidden');
+
+    const dragHint = document.getElementById('drag-hint');
+    if (dragHint) dragHint.style.display = 'block';
+
+    const itemsContainer = document.getElementById('draggable-items-container');
+    itemsContainer.innerHTML = ''; // Temizle
+
+    // Eşyaları Yarat
+    lvl.gameData.items.forEach(item => {
         const div = document.createElement('div');
-        div.className = 'w-24 sm:w-28 text-5xl cursor-grab active:cursor-grabbing hover:scale-110 transition-transform bg-white/80 p-2 rounded-2xl shadow-sm border-2 border-gray-100 flex flex-col items-center justify-center break-words';
+        div.className = 'drag-item';
+
+        // Eğer hero-sleep ise, kullanıcının kendi avatarını göster
+        if (item.id === 'hero-sleep') {
+            div.textContent = getActiveUser().avatar;
+        } else {
+            div.textContent = item.icon;
+        }
+
         div.draggable = true;
         div.dataset.id = item.id;
-        div.dataset.type = item.type; // 'healthy' or 'unhealthy'
+        div.dataset.isGood = item.isGood;
+        div.dataset.message = item.message;
 
-        const isToddler = userProgress.ageGroup === '2-5';
-        const nameSpanClass = isToddler ? 'hidden' : 'text-xs sm:text-sm font-bold text-gray-600 mt-1 text-center w-full leading-tight px-1 break-words';
-        const emojiSizeClass = isToddler ? 'text-7xl mb-2' : '';
+        // Desktop Events
+        div.addEventListener('dragstart', handleDragStart);
+        div.addEventListener('dragend', handleDragEnd);
 
-        div.innerHTML = `<span class="${emojiSizeClass}">${item.emoji}</span><span class="${nameSpanClass}">${item.name || ''}</span>`;
+        // Mobile Touch Events
+        div.addEventListener('touchstart', handleTouchStart, { passive: false });
+        div.addEventListener('touchmove', handleTouchMove, { passive: false });
+        div.addEventListener('touchend', handleTouchEnd);
 
-        // Drag Events (Masaüstü)
-        div.ondragstart = (e) => {
-            draggedElement = div;
-            e.dataTransfer.setData('text/plain', item.id);
-            setTimeout(() => div.classList.add('opacity-50', 'scale-90'), 0);
-        };
-        div.ondragend = () => {
-            div.classList.remove('opacity-50', 'scale-90');
-            draggedElement = null;
-        };
-
-        // Touch Events (Mobil)
-        let initialX, initialY, currentX, currentY;
-        let isDraggingTouch = false;
-
-        div.addEventListener('touchstart', (e) => {
-            draggedElement = div;
-            div.classList.add('absolute', 'z-50', 'scale-110');
-            isDraggingTouch = true;
-            initialX = e.touches[0].clientX - (div.offsetLeft || 0); // initial offset fix
-            initialY = e.touches[0].clientY - (div.offsetTop || 0);
-        }, { passive: false });
-
-        div.addEventListener('touchmove', (e) => {
-            if (!isDraggingTouch) return;
-            e.preventDefault();
-            currentX = e.touches[0].clientX;
-            currentY = e.touches[0].clientY;
-
-            // Ortalayarak taşı
-            div.style.left = `${currentX - div.offsetWidth / 2}px`;
-            div.style.top = `${currentY - div.offsetHeight / 2}px`;
-        }, { passive: false });
-
-        div.addEventListener('touchend', (e) => {
-            if (!isDraggingTouch) return;
-            isDraggingTouch = false;
-            div.classList.remove('absolute', 'z-50', 'scale-110');
-            div.style.left = '';
-            div.style.top = '';
-
-            const touch = e.changedTouches[0];
-
-            // Check collisions with dropzones manually for touch
-            const checkCollision = (zoneElement) => {
-                const rect = zoneElement.getBoundingClientRect();
-                return (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-                    touch.clientY >= rect.top && touch.clientY <= rect.bottom);
-            };
-
-            if (checkCollision(leftZone)) {
-                handleDropAttempt(div, level.dropzones.left.type, leftContent);
-            } else if (checkCollision(rightZone)) {
-                handleDropAttempt(div, level.dropzones.right.type, rightContent);
-            }
-            draggedElement = null;
-        });
-
-        sortingItemsContainer.appendChild(div);
+        itemsContainer.appendChild(div);
     });
 
-    // Dropzone Events (Masaüstü)
-    const setupDropzone = (zone, expectedType, contentContainer) => {
-        zone.ondragover = (e) => {
-            e.preventDefault();
-            zone.classList.add('brightness-95', 'scale-[1.02]');
-        };
-        zone.ondragleave = () => {
-            zone.classList.remove('brightness-95', 'scale-[1.02]');
-        };
-        zone.ondrop = (e) => {
-            e.preventDefault();
-            zone.classList.remove('brightness-95', 'scale-[1.02]');
-            if (draggedElement) {
-                handleDropAttempt(draggedElement, expectedType, contentContainer);
-            }
-        };
+    // Dropzone Events (Desktop)
+    const dropZone = document.getElementById('hero-drop-zone');
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+    dropZone.addEventListener('drop', handleDrop);
+
+    navigateTo('minigame');
+}
+
+function closeMiniGame() {
+    activeMiniGame = null;
+    navigateTo('module-detail');
+}
+
+function continueMiniGame() {
+    if (!activeMiniGame) return;
+
+    const { moduleId, levelId, xpAmount, foodAmount } = activeMiniGame;
+
+    // Önce mini oyunu kapat ve harita ekranını visible yap (animasyonun görünmesi için CSS engine frame atlamasın)
+    closeMiniGame();
+
+    // Kazanımı ver ve harita üzerindeki animasyonu başlat
+    setTimeout(() => {
+        completeLevel(moduleId, levelId, xpAmount, foodAmount);
+    }, 50);
+}
+
+// DRAG EVENT HANDLERS (DESKTOP)
+let draggedItemInfo = null;
+
+function handleDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.dataset.id);
+    draggedItemInfo = {
+        element: e.target,
+        isGood: e.target.dataset.isGood === 'true',
+        message: e.target.dataset.message
     };
+    setTimeout(() => e.target.style.opacity = '0.5', 0);
 
-    if (level.dropzones) {
-        setupDropzone(leftZone, level.dropzones.left.type, leftContent);
-        setupDropzone(rightZone, level.dropzones.right.type, rightContent);
+    const dragHint = document.getElementById('drag-hint');
+    if (dragHint) dragHint.style.display = 'none';
+}
+
+function handleDragEnd(e) {
+    e.target.style.opacity = '1';
+    draggedItemInfo = null;
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('hero-drop-zone').classList.add('active');
+}
+
+function handleDragLeave(e) {
+    document.getElementById('hero-drop-zone').classList.remove('active');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('hero-drop-zone').classList.remove('active');
+
+    if (draggedItemInfo) {
+        processGameDrop(draggedItemInfo);
+    }
+}
+
+// TOUCH EVENT HANDLERS (MODERN MOBILE DRAG)
+let touchDraggedElement = null;
+
+function handleTouchStart(e) {
+    touchDraggedElement = e.target;
+    draggedItemInfo = {
+        element: e.target,
+        isGood: e.target.dataset.isGood === 'true',
+        message: e.target.dataset.message
+    };
+    e.target.style.opacity = '0.8';
+    e.target.style.position = 'absolute';
+    e.target.style.zIndex = '1000';
+
+    const dragHint = document.getElementById('drag-hint');
+    if (dragHint) dragHint.style.display = 'none';
+
+    // Elementi touch kordinatlarına taşı
+    const touch = e.touches[0];
+    moveElementTo(e.target, touch.clientX, touch.clientY);
+}
+
+function handleTouchMove(e) {
+    e.preventDefault(); // Ekran scrollunu engelle
+    const touch = e.touches[0];
+    moveElementTo(touchDraggedElement, touch.clientX, touch.clientY);
+
+    // Dropzone üstünde duruyor mu hesapla
+    const dropZone = document.getElementById('hero-drop-zone');
+    const dropRect = dropZone.getBoundingClientRect();
+
+    if (
+        touch.clientX >= dropRect.left &&
+        touch.clientX <= dropRect.right &&
+        touch.clientY >= dropRect.top &&
+        touch.clientY <= dropRect.bottom
+    ) {
+        dropZone.classList.add('active');
+    } else {
+        dropZone.classList.remove('active');
+    }
+}
+
+function handleTouchEnd(e) {
+    if (!touchDraggedElement) return;
+
+    const touch = e.changedTouches[0];
+    const dropZone = document.getElementById('hero-drop-zone');
+    const dropRect = dropZone.getBoundingClientRect();
+
+    dropZone.classList.remove('active');
+    touchDraggedElement.style.opacity = '1';
+    touchDraggedElement.style.position = 'static';
+    touchDraggedElement.style.zIndex = 'auto';
+    touchDraggedElement.style.transform = 'none';
+
+    // Dropzone içerisine mi bırakıldı?
+    if (
+        touch.clientX >= dropRect.left &&
+        touch.clientX <= dropRect.right &&
+        touch.clientY >= dropRect.top &&
+        touch.clientY <= dropRect.bottom
+    ) {
+        processGameDrop(draggedItemInfo);
     }
 
-    function handleDropAttempt(itemElement, expectedType, targetContainer) {
-        const itemType = itemElement.dataset.type;
+    touchDraggedElement = null;
+    draggedItemInfo = null;
+}
 
-        if (itemType === expectedType) {
-            // Doğru eşleşme
-            itemElement.draggable = false;
-            itemElement.classList.remove('cursor-grab', 'active:cursor-grabbing', 'hover:scale-110');
-            itemElement.classList.add('cursor-default', 'bg-green-100', 'border-green-400', 'scale-95'); // Başarı stili
+function moveElementTo(el, x, y) {
+    if (!el) return;
+    el.style.left = (x - el.offsetWidth / 2) + 'px';
+    el.style.top = (y - el.offsetHeight / 2) + 'px';
+}
 
-            // Clone the element cleanly for the dropzone to remove absolute positioning bugs from touch
-            itemElement.style.position = 'relative';
-            itemElement.style.left = '0';
-            itemElement.style.top = '0';
+function processGameDrop(info) {
+    if (!activeMiniGame) return;
 
-            targetContainer.appendChild(itemElement);
-            correctSortCount++;
+    const energyBar = document.getElementById('minigame-energy');
+    const gameData = activeMiniGame.gameData;
 
-            // Oyun bitti mi?
-            if (correctSortCount === totalItems) {
-                setTimeout(handleSortingWin, 500);
+    // Özel Oyun Mantığı: El Yıkama (Soap -> Water)
+    if (gameData.subType === 'wash-hands') {
+        const dropZoneAvatar = document.querySelector('.hero-avatar-large');
+
+        if (info.element.dataset.id === 'soap') {
+            activeMiniGame.energy = 50;
+            energyBar.style.width = '50%';
+            energyBar.style.backgroundColor = 'var(--secondary)';
+            dropZoneAvatar.innerHTML = '<span style="position:relative;">🖐️<span style="position:absolute; top:0; left:0; font-size:1.5rem;">🧼</span></span>';
+            showMiniGameFeedback("Köpük Zamanı!", info.message, "var(--success)", "🧼");
+            info.element.style.display = 'none';
+            activeMiniGame.soapApplied = true;
+        } else if (info.element.dataset.id === 'water') {
+            if (activeMiniGame.soapApplied) {
+                activeMiniGame.energy = 100;
+                energyBar.style.width = '100%';
+                energyBar.style.backgroundColor = 'var(--success)';
+                dropZoneAvatar.innerHTML = '✨🖐️✨';
+                document.getElementById('feedback-continue-btn').classList.remove('hidden');
+                showMiniGameFeedback("Harika!", info.message, "var(--success)", "✨", true);
+                info.element.style.display = 'none';
+
+                // Konfeti fırlat
+                const effect = document.createElement('div');
+                effect.className = 'food-effect anim-float-up';
+                effect.textContent = '🎉';
+                effect.style.left = '50%';
+                effect.style.top = '50%';
+                document.getElementById('hero-drop-zone').appendChild(effect);
+                setTimeout(() => effect.remove(), 1000);
+
+            } else {
+                // Sabun sürmeden su tutarsa hata/uyarı ver
+                activeMiniGame.energy = 0;
+                energyBar.style.width = '0%';
+                energyBar.style.backgroundColor = 'var(--error)';
+                showMiniGameFeedback("Bekle!", "Önce sabun kullanmalısın! 🧼", "var(--error)", "⚠️");
+
+                // Titreme
+                const dropZone = document.getElementById('hero-drop-zone');
+                dropZone.style.animation = 'eat-wobble 0.3s ease';
+                setTimeout(() => dropZone.style.animation = 'none', 300);
             }
+        }
+        return;
+    }
+
+    // Özel Oyun Mantığı: Uyku (Hero -> Bed)
+    if (gameData.subType === 'sleep') {
+        if (info.element.dataset.id === 'hero-sleep') {
+            const dropZoneAvatar = document.querySelector('.hero-avatar-large');
+            activeMiniGame.energy = 100;
+            energyBar.style.width = '100%';
+            energyBar.style.backgroundColor = 'var(--success)';
+
+            // Yatakta uyuyan kahraman
+            dropZoneAvatar.innerHTML = `<span style="position:relative;">🛌<span style="position:absolute; top:-10px; right:0; font-size:1.5rem;">😴</span></span>`;
+
+            document.getElementById('feedback-continue-btn').classList.remove('hidden');
+            showMiniGameFeedback("İyi Uykular!", info.message, "var(--success)", "🌙", true);
+            info.element.style.display = 'none';
+
+            // Konfeti fırlat
+            const effect = document.createElement('div');
+            effect.className = 'food-effect anim-float-up';
+            effect.textContent = '✨';
+            effect.style.left = '50%';
+            effect.style.top = '50%';
+            document.getElementById('hero-drop-zone').appendChild(effect);
+            setTimeout(() => effect.remove(), 1000);
+
+        }
+        return;
+    }
+
+    if (info.isGood) {
+        // Doğru seçim
+        activeMiniGame.energy = 100;
+        energyBar.style.width = '100%';
+        energyBar.style.backgroundColor = 'var(--success)';
+
+        // Eğer oyuna özel bir successEmoji (Başarı emojisi) tanımlanmışsa (Maske, Paylaşma vs.)
+        if (activeMiniGame.gameData.successEmoji) {
+            const dropZoneAvatar = document.querySelector('.hero-avatar-large');
+            dropZoneAvatar.innerHTML = activeMiniGame.gameData.successEmoji;
+
+            // Konfeti fırlat
+            const effect = document.createElement('div');
+            effect.className = 'food-effect anim-float-up';
+            effect.textContent = activeMiniGame.gameData.successEffect || '🎉';
+            effect.style.left = '50%';
+            effect.style.top = '50%';
+            document.getElementById('hero-drop-zone').appendChild(effect);
+            setTimeout(() => effect.remove(), 1000);
+        }
+
+        const successTitle = activeMiniGame.gameData.successTitle || "Harika!";
+        const successIcon = activeMiniGame.gameData.successIcon || "✨";
+
+        document.getElementById('feedback-continue-btn').classList.remove('hidden');
+        showMiniGameFeedback(successTitle, info.message, "var(--success)", successIcon, true);
+        info.element.style.display = 'none'; // Sürüklenebilir öğeyi gizle
+
+
+    } else {
+        // Yanlış seçim
+        activeMiniGame.energy = Math.max(0, activeMiniGame.energy - 20);
+        energyBar.style.width = `${activeMiniGame.energy}%`;
+        energyBar.style.backgroundColor = 'var(--error)';
+
+        // Titreme efekti
+        const dropZone = document.getElementById('hero-drop-zone');
+        dropZone.style.animation = 'eat-wobble 0.3s ease';
+        setTimeout(() => dropZone.style.animation = 'none', 300);
+
+        showMiniGameFeedback("Dikkat!", info.message, "var(--error)", "⚠️");
+    }
+}
+
+function showMiniGameFeedback(title, message, color, icon, isFinal = false) {
+    const popup = document.getElementById('minigame-feedback');
+    const titleEl = document.getElementById('feedback-title');
+    const messageEl = document.getElementById('feedback-message');
+    const iconEl = document.getElementById('feedback-icon');
+
+    titleEl.textContent = title;
+    titleEl.style.color = color;
+    messageEl.textContent = message;
+    iconEl.textContent = icon;
+
+    popup.classList.remove('hidden');
+
+    // Eğer "Devam Et" butonu kapalıysa (yani oyun bitmediyse/ara adımsa)
+    // VEYA isFinal zorunlu olarak false ise otomatik kapat.
+    const continueBtn = document.getElementById('feedback-continue-btn');
+    if (!isFinal && continueBtn.classList.contains('hidden')) {
+        setTimeout(() => {
+            popup.classList.add('hidden');
+        }, 2000);
+    }
+}
+
+function feedPet() {
+    if (!globalCurrentModule) return;
+
+    const user = getActiveUser();
+    if (!user) return;
+
+    const petData = user.pets[globalCurrentModule];
+    if (petData.food <= 0 || petData.happiness >= 100) return;
+
+    petData.food -= 1;
+    petData.happiness += 20; // Each food gives 20% happiness
+    if (petData.happiness > 100) petData.happiness = 100;
+
+    updateUser(user);
+
+    // Trigger animations (Faz 6 Görsel Geribildirim)
+    const petEmoji = document.getElementById('pet-emoji');
+    if (petEmoji) {
+        petEmoji.classList.remove('pet-eat');
+        void petEmoji.offsetWidth; // Trigger reflow
+        petEmoji.classList.add('pet-eat');
+
+        // Uçuşan kalpler/yıldızlar efekti
+        const effect = document.createElement('div');
+        effect.textContent = ['💖', '✨', '😋', '🪄'][Math.floor(Math.random() * 4)];
+        effect.style.position = 'absolute';
+        effect.style.left = '50%';
+        effect.style.top = '0';
+        effect.style.fontSize = '2rem';
+        effect.style.pointerEvents = 'none';
+        effect.style.animation = 'float-up 1s ease-out forwards';
+
+        const wrapper = document.querySelector('.pet-avatar-wrapper');
+        if (wrapper) wrapper.appendChild(effect);
+        setTimeout(() => effect.remove(), 1000);
+    }
+    // Update UI immediately
+    document.getElementById('pet-food-amount').textContent = petData.food;
+    document.getElementById('pet-happiness-fill').style.width = `${petData.happiness}%`;
+
+    const statusEl = document.getElementById('pet-status');
+    if (petData.happiness > 50) {
+        statusEl.textContent = 'Mutlu! 🥰';
+    } else {
+        statusEl.textContent = 'Uyanık! 👀';
+    }
+
+    const feedBtn = document.getElementById('feed-pet-btn');
+    feedBtn.disabled = petData.food <= 0 || petData.happiness >= 100;
+
+    showToast('Harika! Dostunu besledin. 💖');
+}
+
+// ─── RENDER: PROFILE ───────────────────────────────────
+function renderProfile() {
+    const user = getActiveUser();
+    if (!user) { navigateTo('login'); return; }
+
+    document.getElementById('profile-avatar').textContent = user.avatar;
+    document.getElementById('profile-avatar').style.background = user.avatarBg;
+    document.getElementById('profile-displayname').textContent = user.displayName;
+    document.getElementById('profile-username').textContent = '@' + user.username;
+    document.getElementById('profile-bio').textContent = user.bio || 'Henüz bir bio eklenmedi.';
+    const age = calculateAge(user.birthDate);
+    document.getElementById('profile-stars').textContent = user.stars || 0;
+    document.getElementById('profile-age-group').textContent = age + ' Yaş';
+    document.getElementById('edit-bio').value = user.bio || '';
+}
+
+// ─── RENDER: UPGRADE ──────────────────────────────────
+function renderUpgradeScreen() {
+    const user = getActiveUser();
+    if (!user) return;
+
+    document.getElementById('upgrade-stars').textContent = user.stars || 0;
+
+    // Update button states
+    document.querySelectorAll('.upgrade-btn').forEach(btn => {
+        if (user.stars < 5) {
+            btn.disabled = true;
+            btn.textContent = 'Yetersiz ⭐';
         } else {
-            // Yanlış eşleşme (Sallanma animasyonu)
-            itemElement.classList.add('animate-shake', 'bg-red-100', 'border-red-400');
-            setTimeout(() => {
-                itemElement.classList.remove('animate-shake', 'bg-red-100', 'border-red-400');
-            }, 500);
-
-            // Reset position if touch failed
-            itemElement.style.position = 'relative';
-            itemElement.style.left = '0';
-            itemElement.style.top = '0';
+            btn.disabled = false;
+            btn.textContent = '5 ⭐';
         }
-    }
+    });
 
-    function handleSortingWin() {
-        let modalMessage = level.winMessage || 'Tümünü doğru gruplandırdın!'; // Dinamik winMessage eklendi
-        let modalTitle = level.winTitle || 'Tebrikler! 🎉';
-
-        handleAnswer(true, true);
-        showModal(modalTitle, modalMessage, 'İlerle 🚀', true, level.winEmoji || '🎊', () => {
-            pendingStarLevelId = currentLevelId;
-            showThemeMap(currentThemeId);
-            closeModal();
-        });
-    }
+    // Update screen-stats if needed
 }
 
-// ----------------------------------------------------
-// Sonraki Bölümü Açma Mantığı
-// ----------------------------------------------------
-function unlockNextLevel() {
-    const themeIndex = userProgress.themes.findIndex(t => t.id === currentThemeId);
-    if (themeIndex === -1) return;
+function upgradeStat(statType) {
+    const user = getActiveUser();
+    if (!user || user.stars < 5) return;
 
-    const theme = userProgress.themes[themeIndex];
-    if (!theme.levels) return;
+    user.stars -= 5;
+    if (!user.stats) user.stats = { power: 1, speed: 1, intel: 1 };
 
-    const levelIndex = theme.levels.findIndex(l => String(l.id) === String(currentLevelId));
+    user.stats[statType] = (user.stats[statType] || 1) + 1;
 
-    // Eğer bu bölüm son bölüm değilse, sonrakinin kilidini aç
-    if (levelIndex !== -1 && levelIndex < theme.levels.length - 1) {
-        userProgress.themes[themeIndex].levels[levelIndex + 1].isLocked = false;
-        saveProgress();
-    }
+    updateUser(user);
+    showToast(`${statType.toUpperCase()} Geliştirildi! 🚀`, 'success');
+    renderUpgradeScreen();
 }
 
-// ----------------------------------------------------
-// Cevap Kontrolü
-// ----------------------------------------------------
-function handleAnswer(isCorrect, isMatchingGame = false) {
-    if (isCorrect) {
-        addStar(1);
-        unlockNextLevel();
-        // Eşleştirme oyununun kendi özel tebrikler ekranı ve animasyon lojiği var renderMatchingGame içinde
-        if (!isMatchingGame && (currentThemeId !== 7 || !currentLevelId.toString().startsWith('matching'))) {
-            const theme = userProgress.themes.find(t => t.id === currentThemeId);
-            const baseLevel = theme.levels.find(l => String(l.id) === String(currentLevelId));
-            const level = getAgeSpecificContent(baseLevel);
+// ─── RENDER: COMMUNITY ─────────────────────────────────
+function renderCommunity() {
+    const user = getActiveUser();
+    if (!user) { navigateTo('login'); return; }
 
-            let customTitle = level.winTitle || 'Doğru Cevap!';
-            let customDesc = level.winMessage || 'Harikasın, 1 Yıldız kazandın! ⭐';
-            let bgClass = level.bgClass || 'bg-blue-50';
-            let borderClass = level.borderClass || 'border-blue-200';
-            let customEmoji = level.winEmoji || '🎉';
+    const users = getAllUsers();
+    const container = document.getElementById('community-list');
+    container.innerHTML = '';
 
-            const richModalHTML = `
-                <div class="flex flex-col items-center justify-center text-center px-2 py-4">
-                    <p class="text-2xl sm:text-3xl text-gray-800 leading-tight font-extrabold mb-4 mt-2">
-                        ${customTitle}
-                    </p>
-                    <p class="text-xl font-bold text-gray-600 ${bgClass} p-4 rounded-2xl border-2 ${borderClass}">
-                        ${customDesc}
-                    </p>
+    if (users.length === 0) {
+        container.innerHTML = `
+        <div class="empty-state" style="grid-column: 1/-1">
+                <div class="empty-icon">🌱</div>
+                <p>Henüz başka kahraman yok.</p>
+            </div>
+        `;
+        return;
+    }
+
+    users.forEach((u, i) => {
+        const card = document.createElement('div');
+        card.className = 'community-card anim-fade-up';
+        card.style.animationDelay = `${i * 0.08}s`;
+        card.innerHTML = `
+        <div class="cc-avatar" style="background:${u.avatarBg}">${u.avatar}</div>
+            <div class="cc-name">${u.displayName}</div>
+            <div class="cc-username">@${u.username}</div>
+            <div class="cc-age">${calculateAge(u.birthDate)} Yaş</div>
+    `;
+        card.onclick = () => showProfileDetail(u.id);
+        container.appendChild(card);
+    });
+}
+
+// ─── RENDER: PROFILE DETAIL ────────────────────────────
+function showProfileDetail(userId) {
+    const users = getAllUsers();
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    document.getElementById('detail-avatar').textContent = user.avatar;
+    document.getElementById('detail-avatar').style.background = user.avatarBg;
+    document.getElementById('detail-displayname').textContent = user.displayName;
+    document.getElementById('detail-username').textContent = '@' + user.username;
+    document.getElementById('detail-bio').textContent = user.bio || '';
+    const age = calculateAge(user.birthDate);
+    document.getElementById('detail-stars').textContent = user.stars || 0;
+    document.getElementById('detail-age-group').textContent = age + ' Yaş';
+    document.getElementById('detail-about').textContent = user.bio || 'Bu kahraman henüz bir şey yazmamış.';
+
+    navigateTo('profile-detail');
+}
+
+// ─── RENDER: ACADEMY (FAZ 3) ──────────────────────────
+let academyState = { currentMission: null, solvedCount: 0 };
+
+function renderAcademyScreen() {
+    const user = getActiveUser();
+    if (!user) return;
+    const sEl = document.getElementById('academy-stars');
+    if (sEl) sEl.textContent = user.stars || 0;
+
+    const today = new Date().toISOString().split('T')[0];
+    if (user.lastAcademyDay === today) {
+        const container = document.getElementById('game-container');
+        if (container) {
+            container.innerHTML = `
+        <div class="text-center">
+                    <h3>Harika iş çıkardın! 🌟</h3>
+                    <p>Bugünkü süper yakıtını aldın. Yarın yeni eğitimler için bekliyoruz!</p>
                 </div>
-            `;
-
-            showModal('Tebrikler!', richModalHTML, 'Haritaya Dön', true, customEmoji, () => {
-                pendingStarLevelId = currentLevelId;
-                showThemeMap(currentThemeId);
-                closeModal();
-            });
+        `;
         }
-    } else {
-        showModal('Oops!', 'Bir daha dene, sen yapabilirsin!', 'Tekrar Dene', false, '💡');
     }
 }
 
-// ----------------------------------------------------
-// Ortak Fonksiyonlar (UI Modal)
-// ----------------------------------------------------
-const modalOverlay = document.getElementById('modal-overlay');
-const modalBox = document.getElementById('modal-box');
-const modalTitle = document.getElementById('modal-title');
-const modalDesc = document.getElementById('modal-desc'); // Changed from modal-message to modal-desc
-const modalBtn = document.getElementById('modal-btn');
-const modalEmoji = document.getElementById('modal-emoji');
-let modalSuccessMode = false;
+function startDailyMission() {
+    const mission = academyMissions[Math.floor(Math.random() * academyMissions.length)];
+    academyState.currentMission = mission;
+    academyState.solvedCount = 0;
 
-// Modal Yönetimi
-function showModal(title, desc, btnText, isSuccess, emojiStr = '🎉', onBtnClickCallback = null) {
-    if (userProgress.ageGroup === '2-5') {
-        modalTitle.classList.add('hidden');
-        modalDesc.classList.add('hidden');
-        modalBtn.textContent = isSuccess ? '🚀' : '🔁';
-        modalEmoji.className = 'text-9xl mb-4 drop-shadow-lg'; // Make emoji giant for toddlers
-    } else {
-        modalTitle.classList.remove('hidden');
-        modalDesc.classList.remove('hidden');
-        modalEmoji.className = 'text-6xl mb-4 drop-shadow-md';
-        modalTitle.textContent = title;
-        modalDesc.innerHTML = desc; // Use innerHTML for rich content
-        modalBtn.textContent = btnText;
-    }
+    const container = document.getElementById('game-container');
+    if (!container) return;
+    container.innerHTML = `<h4>${mission.title}</h4> <p>${mission.description}</p>`;
 
-    modalEmoji.textContent = emojiStr;
-    modalSuccessMode = isSuccess;
+    if (mission.type === 'match') renderMatchGame(mission, container);
+    if (mission.type === 'fill') renderFillGame(mission, container);
+}
 
-    // Buton Rengi
-    if (isSuccess) {
-        modalBtn.className = 'mt-8 w-full py-4 text-2xl font-extrabold rounded-full bg-pastelYellow border-4 border-pastelPinkDark text-gray-800 shadow-md active:scale-95';
-    } else {
-        modalBtn.className = 'mt-8 w-full py-4 text-2xl font-extrabold rounded-full bg-pastelPink border-4 border-gray-200 text-gray-800 shadow-md active:scale-95';
-    }
-
-    // Önceki Event Listener'ları temizle
-    modalBtn.onclick = null;
-
-    if (onBtnClickCallback) {
-        modalBtn.onclick = onBtnClickCallback;
-    } else {
-        // Varsayılan onClose Davranışı
-        modalBtn.onclick = () => {
-            closeModal();
-            if (isSuccess) {
-                // Basit davranışta da haritaya dön
-                pendingStarLevelId = currentLevelId;
-                showThemeMap(currentThemeId);
+function renderMatchGame(mission, container) {
+    const grid = document.createElement('div');
+    grid.className = 'match-grid';
+    const shuffledItems = [...mission.pairs].sort(() => Math.random() - 0.5);
+    const shuffledPowers = [...mission.pairs].sort(() => Math.random() - 0.5);
+    container.appendChild(grid);
+    let selectedItem = null;
+    shuffledItems.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'match-item';
+        div.textContent = p.item;
+        div.onclick = () => {
+            document.querySelectorAll('.match-item').forEach(i => i.style.borderColor = '#ddd');
+            div.style.borderColor = 'var(--primary)';
+            selectedItem = p;
+        };
+        grid.appendChild(div);
+    });
+    shuffledPowers.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'match-target';
+        div.textContent = p.power;
+        div.onclick = () => {
+            if (selectedItem && selectedItem.power === p.power) {
+                div.style.background = 'var(--success)';
+                div.style.color = '#fff';
+                div.textContent = '✅';
+                div.onclick = null;
+                academyState.solvedCount++;
+                if (academyState.solvedCount === mission.pairs.length) completeAcademyMission();
+            } else {
+                showToast('Tekrar dene kahraman!', 'info');
             }
         };
+        grid.appendChild(div);
+    });
+}
+
+function renderFillGame(mission, container) {
+    let html = mission.text;
+    Object.keys(mission.options).forEach(key => {
+        let select = `<select class="inline-select" onchange="checkFill(this, '${key}')">
+        <option value="">Seç...</option>
+            ${mission.options[key].map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+        </select>`;
+        html = html.replace(`[${key}]`, select);
+    });
+    const div = document.createElement('div');
+    div.className = 'fill-text';
+    div.innerHTML = html;
+    container.appendChild(div);
+}
+
+function checkFill(select, key) {
+    if (select.value === academyState.currentMission.correct[key]) {
+        select.style.borderColor = 'var(--success)';
+        select.disabled = true;
+        academyState.solvedCount++;
+        if (academyState.solvedCount === Object.keys(academyState.currentMission.correct).length) {
+            completeAcademyMission();
+        }
     }
-
-    modalOverlay.classList.remove('hidden');
-    modalOverlay.classList.add('flex');
-
-    // Giriş Animasyonu
-    setTimeout(() => {
-        modalOverlay.classList.remove('opacity-0');
-        modalBox.classList.remove('scale-50');
-    }, 10);
 }
 
-function closeModal() {
-    modalOverlay.classList.add('opacity-0');
-    modalBox.classList.add('scale-50');
-
-    setTimeout(() => {
-        modalOverlay.classList.add('hidden');
-        // The default success action is now handled by the modalBtn.onclick in showModal
-    }, 300);
+function completeAcademyMission() {
+    const user = getActiveUser();
+    user.stars += 5;
+    user.xp += 50;
+    user.lastAcademyDay = new Date().toISOString().split('T')[0];
+    updateUser(user);
+    const dialog = hospitalDialogs.launch[Math.floor(Math.random() * hospitalDialogs.launch.length)];
+    const docDial = document.getElementById('doctor-dialog');
+    if (docDial) docDial.textContent = dialog;
+    const reward = document.getElementById('academy-reward');
+    if (reward) reward.classList.remove('hidden');
 }
 
-// Başlangıç tetiklemesi
+function launchHero() {
+    document.getElementById('academy-reward').classList.add('hidden');
+    navigateTo('home');
+    setTimeout(() => {
+        const hero = document.getElementById('main-hero');
+        if (hero) {
+            hero.classList.add('launching');
+            showToast('MAGERA EVİNDEN SÜPER UÇUŞ! 🚀', 'success');
+            setTimeout(() => {
+                hero.classList.remove('launching');
+                renderHome();
+            }, 1200);
+        }
+    }, 100);
+}
+
+// ─── INIT ───────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    initProgress();
+    const activeUser = getActiveUser();
+    if (activeUser) {
+        navigateTo('home');
+    } else {
+        navigateTo('login');
+    }
 });
