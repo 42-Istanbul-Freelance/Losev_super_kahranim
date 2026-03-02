@@ -1207,7 +1207,7 @@ function feedPet() {
     showToast('Harika! Dostunu besledin. 💖');
 }
 
-// ─── RENDER: PROFILE ───────────────────────────────────
+// ─── RENDER: PROFILE ────────────────────────────────────
 function renderProfile() {
     const user = getActiveUser();
     if (!user) { navigateTo('login'); return; }
@@ -1221,6 +1221,37 @@ function renderProfile() {
     document.getElementById('profile-stars').textContent = user.stars || 0;
     document.getElementById('profile-age-group').textContent = age + ' Yaş';
     document.getElementById('edit-bio').value = user.bio || '';
+
+    // Status
+    const statusEl = document.getElementById('my-status-text');
+    const statusInput = document.getElementById('my-status-input');
+    if (statusEl) statusEl.textContent = user.status || 'Bugün nasılsın?';
+    if (statusInput) statusInput.value = '';
+
+    // Streaks on profile
+    const myStreaks = document.getElementById('my-profile-streaks');
+    if (myStreaks && user.streaks) {
+        const s = user.streaks;
+        myStreaks.innerHTML = `
+            <div class="detail-streak-row">🥕 Beslenme <strong>${s.nutrition || 0} 🔥</strong></div>
+            <div class="detail-streak-row">💊 İlaç <strong>${s.medication || 0} 🔥</strong></div>
+            <div class="detail-streak-row">🏃 Aktivite <strong>${s.activity || 0} 🔥</strong></div>
+        `;
+    }
+}
+
+function saveStatus() {
+    const user = getActiveUser();
+    if (!user) return;
+    const input = document.getElementById('my-status-input');
+    const val = (input?.value || '').trim();
+    if (!val) { showToast('Bir şey yaz! 👋', 'error'); return; }
+    user.status = val;
+    updateUser(user);
+    const statusEl = document.getElementById('my-status-text');
+    if (statusEl) statusEl.textContent = val;
+    if (input) input.value = '';
+    showToast('Durumun güncellendi! 🌟', 'success');
 }
 
 // ─── RENDER: UPGRADE ──────────────────────────────────
@@ -1258,55 +1289,91 @@ function upgradeStat(statType) {
     renderUpgradeScreen();
 }
 
-// ─── RENDER: COMMUNITY ─────────────────────────────────
+// ─── RENDER: COMMUNITY ───────────────────────────────
 function renderCommunity() {
     const user = getActiveUser();
     if (!user) { navigateTo('login'); return; }
 
-    const users = getAllUsers();
+    const realUsers = getAllUsers();
     const container = document.getElementById('community-list');
     container.innerHTML = '';
 
-    if (users.length === 0) {
-        container.innerHTML = `
-        <div class="empty-state" style="grid-column: 1/-1">
-                <div class="empty-icon">🌱</div>
-                <p>Henüz başka kahraman yok.</p>
-            </div>
-        `;
+    // Combine sample + real users (exclude self)
+    const allProfiles = [
+        ...SAMPLE_HEROES,
+        ...realUsers.filter(u => u.id !== user.id)
+    ];
+
+    if (allProfiles.length === 0) {
+        container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🌱</div><p>Henüz başka kahraman yok.</p></div>`;
         return;
     }
 
-    users.forEach((u, i) => {
+    allProfiles.forEach((u, i) => {
         const card = document.createElement('div');
         card.className = 'community-card anim-fade-up';
         card.style.animationDelay = `${i * 0.08}s`;
+
+        const maxStreak = u.streaks ? Math.max(u.streaks.nutrition || 0, u.streaks.medication || 0, u.streaks.activity || 0) : 0;
+        const streakBadge = maxStreak >= 7 ? `<span class="cc-streak-badge">🔥 ${maxStreak} Gün</span>` : '';
+
+        const statusHtml = u.status
+            ? `<div class="cc-status">&ldquo;${u.status}&rdquo;</div>`
+            : '';
+
         card.innerHTML = `
-        <div class="cc-avatar" style="background:${u.avatarBg}">${u.avatar}</div>
-            <div class="cc-name">${u.displayName}</div>
+            <div class="cc-avatar" style="background:${u.avatarBg}">${u.avatar}</div>
+            <div class="cc-name">${u.displayName} ${streakBadge}</div>
             <div class="cc-username">@${u.username}</div>
-            <div class="cc-age">${calculateAge(u.birthDate)} Yaş</div>
-    `;
-        card.onclick = () => showProfileDetail(u.id);
+            ${statusHtml}
+        `;
+        card.onclick = () => showProfileDetail(u.id, u.isSample ? u : null);
         container.appendChild(card);
     });
 }
 
-// ─── RENDER: PROFILE DETAIL ────────────────────────────
-function showProfileDetail(userId) {
-    const users = getAllUsers();
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
+// ─── RENDER: PROFILE DETAIL ──────────────────────────
+function showProfileDetail(userId, sampleData) {
+    // Use sample data directly, or find from localStorage
+    const profile = sampleData || getAllUsers().find(u => u.id === userId);
+    if (!profile) return;
 
-    document.getElementById('detail-avatar').textContent = user.avatar;
-    document.getElementById('detail-avatar').style.background = user.avatarBg;
-    document.getElementById('detail-displayname').textContent = user.displayName;
-    document.getElementById('detail-username').textContent = '@' + user.username;
-    document.getElementById('detail-bio').textContent = user.bio || '';
-    const age = calculateAge(user.birthDate);
-    document.getElementById('detail-stars').textContent = user.stars || 0;
+    document.getElementById('detail-avatar').textContent = profile.avatar;
+    document.getElementById('detail-avatar').style.background = profile.avatarBg;
+    document.getElementById('detail-displayname').textContent = profile.displayName;
+    document.getElementById('detail-username').textContent = '@' + profile.username;
+    document.getElementById('detail-bio').textContent = profile.bio || '';
+    const age = calculateAge(profile.birthDate);
+    document.getElementById('detail-stars').textContent = profile.stars || 0;
     document.getElementById('detail-age-group').textContent = age + ' Yaş';
-    document.getElementById('detail-about').textContent = user.bio || 'Bu kahraman henüz bir şey yazmamış.';
+    document.getElementById('detail-about').textContent = profile.bio || 'Bu kahraman henüz bir şey yazmamış.';
+
+    // Status
+    const statusEl = document.getElementById('detail-status-text');
+    if (statusEl) statusEl.textContent = profile.status || '';
+    const statusBox = document.getElementById('detail-status-box');
+    if (statusBox) statusBox.style.display = profile.status ? 'block' : 'none';
+
+    // Streaks
+    const detailStreaks = document.getElementById('detail-streaks');
+    if (detailStreaks && profile.streaks) {
+        const s = profile.streaks;
+        detailStreaks.innerHTML = `
+            <div class="detail-streak-row">
+                <span>🥕 Sağlıklı Beslenme</span>
+                <strong>${s.nutrition || 0} 🔥</strong>
+            </div>
+            <div class="detail-streak-row">
+                <span>💊 İlaç / Tedavi</span>
+                <strong>${s.medication || 0} 🔥</strong>
+            </div>
+            <div class="detail-streak-row">
+                <span>🏃 Sağlık Aktivitesi</span>
+                <strong>${s.activity || 0} 🔥</strong>
+            </div>
+        `;
+        detailStreaks.style.display = 'block';
+    }
 
     navigateTo('profile-detail');
 }

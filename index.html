@@ -377,6 +377,22 @@
                 </div>
             </div>
 
+            <!-- Durum Güncelleme -->
+            <div class="info-card edit-section">
+                <h3>💬 Durum Güncelle</h3>
+                <div class="my-status-display" id="my-status-text">Bugün nasılsın?</div>
+                <input class="form-input" type="text" id="my-status-input" placeholder="Örn: Bugün elma yedim! 🍎"
+                    maxlength="100" style="margin-top:10px;">
+                <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="saveStatus()">Paylaş
+                    🌟</button>
+            </div>
+
+            <!-- Streak Özeti -->
+            <div class="info-card" id="my-profile-streaks-card">
+                <h3>🔥 Seri Özetim</h3>
+                <div id="my-profile-streaks"></div>
+            </div>
+
             <!-- Bio Düzenleme -->
             <div class="info-card edit-section">
                 <h3>✏️ Bio Düzenle</h3>
@@ -387,7 +403,7 @@
 
             <button class="btn btn-ghost btn-block" onclick="doLogout()"
                 style="color:var(--danger);text-decoration:none;margin-top:8px">
-                🚪 Çıkış Yap
+                🚨 Çıkış Yap
             </button>
         </div>
 
@@ -425,6 +441,17 @@
                         <div class="stat-label">Yaş Grubu</div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Kahramanın Durumu -->
+            <div class="info-card" id="detail-status-box" style="display:none;">
+                <h3>💬 Bugünkü Durum</h3>
+                <div class="profile-status-bubble" id="detail-status-text"></div>
+            </div>
+
+            <!-- Streakler -->
+            <div class="info-card" id="detail-streaks" style="display:none;">
+                <h3>🔥 Günlük Seri</h3>
             </div>
 
             <div class="info-card">

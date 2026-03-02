@@ -327,3 +327,99 @@ const hospitalDialogs = {
         "Bu meyveler sana süper hız verdi! ⚡"
     ]
 };
+
+// ═══════════════════════════════════════════════════════
+// ÖRNEK TOPLULUK PROFİLLERİ (Sabit kahramanlar)
+// ═══════════════════════════════════════════════════════
+const SAMPLE_HEROES = [
+    {
+        id: 'sample_1',
+        displayName: 'Elif Yıldız',
+        username: 'elifyildiz',
+        avatar: '🦸‍♀️',
+        avatarBg: '#FFD6E0',
+        gender: 'girl',
+        birthDate: '2014-03-15',
+        bio: 'Her gün biraz daha güçlüyüm! 💪',
+        stars: 48,
+        xp: 320,
+        status: '🍎 Bugün sağlıklı bir besin olarak elma yedim! Çok lezzetliydi.',
+        statusEmoji: '🍎',
+        statusTime: 'Bugün',
+        streaks: { nutrition: 12, medication: 15, activity: 8 },
+        streakHistory: {}, // dolu gözükecek
+        isSample: true
+    },
+    {
+        id: 'sample_2',
+        displayName: 'Can Kahraman',
+        username: 'cankahraman',
+        avatar: '🦸‍♂️',
+        avatarBg: '#D6E4FF',
+        gender: 'boy',
+        birthDate: '2013-07-22',
+        bio: 'Süper kahramanlar asla pes etmez!',
+        stars: 62,
+        xp: 580,
+        status: '🎨 Bugün resim yaptım! Hastanedeki hemşire ablama çiçek çizdim 🌸',
+        statusEmoji: '🎨',
+        statusTime: 'Bugün',
+        streaks: { nutrition: 5, medication: 20, activity: 5 },
+        streakHistory: {},
+        isSample: true
+    },
+    {
+        id: 'sample_3',
+        displayName: 'Zeynep Güneş',
+        username: 'zeynepgunes',
+        avatar: '🦸‍♀️',
+        avatarBg: '#FFF3CD',
+        gender: 'girl',
+        birthDate: '2015-11-08',
+        bio: 'Güneş gibi parlıyorum her gün! ☀️',
+        stars: 31,
+        xp: 210,
+        status: '💊 Bugün ilaçlarımı zamanında aldım ve doktorum çok mutlu oldu! 👨‍⚕️',
+        statusEmoji: '💊',
+        statusTime: 'Bugün',
+        streaks: { nutrition: 7, medication: 30, activity: 3 },
+        streakHistory: {},
+        isSample: true
+    },
+    {
+        id: 'sample_4',
+        displayName: 'Ahmet Fırtına',
+        username: 'ahmetfirtina',
+        avatar: '🦸‍♂️',
+        avatarBg: '#D6FFE4',
+        gender: 'boy',
+        birthDate: '2012-05-30',
+        bio: 'Fırtına gibi hızlı, kahraman gibi güçlü!',
+        stars: 87,
+        xp: 740,
+        status: '🏥 Bugün doktora ve hemşirelere teşekkür ettim ve onları çok sevdiğimi söyledim! ❤️',
+        statusEmoji: '🏥',
+        statusTime: 'Bugün',
+        streaks: { nutrition: 14, medication: 14, activity: 14 },
+        streakHistory: {},
+        isSample: true
+    },
+    {
+        id: 'sample_5',
+        displayName: 'Ayşe Işık',
+        username: 'ayseisik',
+        avatar: '🦸‍♀️',
+        avatarBg: '#F3E8FF',
+        gender: 'girl',
+        birthDate: '2016-01-12',
+        bio: 'Küçük ama güçlüyüm! ✨',
+        stars: 19,
+        xp: 95,
+        status: '🚶 Bugün koridorda 10 dakika yürüdüm, harika hissettim! Yarın daha çok yürüyeceğim!',
+        statusEmoji: '🚶',
+        statusTime: 'Bugün',
+        streaks: { nutrition: 3, medication: 6, activity: 4 },
+        streakHistory: {},
+        isSample: true
+    }
+];
