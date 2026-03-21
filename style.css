@@ -371,3 +371,70 @@ body {
     background-color: #ef4444;
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
 }
+
+/* Butterfly CSS SVG Animation */
+.butterfly {
+    transform-origin: center;
+}
+
+.left-wing {
+    transform-origin: 48px 50px;
+}
+
+.right-wing {
+    transform-origin: 52px 50px;
+}
+
+.flapping .left-wing {
+    animation: flapLeft 0.15s ease-in-out infinite alternate;
+}
+
+.flapping .right-wing {
+    animation: flapRight 0.15s ease-in-out infinite alternate;
+}
+
+@keyframes flapLeft {
+    0% {
+        transform: scaleX(1);
+    }
+
+    100% {
+        transform: scaleX(0.2);
+    }
+}
+
+@keyframes flapRight {
+    0% {
+        transform: scaleX(1);
+    }
+
+    100% {
+        transform: scaleX(0.2);
+    }
+}
+
+@keyframes popAndVanish {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    20% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+
+    80% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+.popup-anim {
+    animation: popAndVanish 1.5s ease-in-out forwards;
+}

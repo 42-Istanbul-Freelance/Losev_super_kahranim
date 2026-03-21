@@ -79,10 +79,17 @@
             <header class="app-header"
                 style="display:flex; justify-content:space-between; padding:20px; border-bottom:1px solid #eee; background:white; position:sticky; top:0; z-index:10;">
                 <div class="user-greeting" style="display:flex; align-items:center; gap:10px;">
+                    <!-- Maskot: Kelebek Ana Ekranda (Büyük, Sabit, Sınırları Yok) -->
                     <div
-                        style="width:50px; height:50px; border-radius:50%; background:#fffbdf; border:2px solid #facc15; display:flex; justify-content:center; align-items:center; overflow:hidden; box-shadow: 0 0 10px rgba(250,204,21,0.5);">
-                        <img src="./umut.png" alt="Umut" style="width:100%; height:100%; object-fit:cover;"
-                            onerror="this.style.display='none'; this.parentElement.innerText='💡'">
+                        style="width:70px; height:70px; display:flex; justify-content:center; align-items:center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+                        <svg viewBox="0 0 100 100" class="butterfly" xmlns="http://www.w3.org/2000/svg"
+                            style="width:100%; height:100%;">
+                            <path class="wing left-wing" d="M50 50 C 10 0, 0 40, 20 60 C 0 80, 20 100, 50 50"
+                                fill="#E30613" opacity="0.9" />
+                            <path class="wing right-wing" d="M50 50 C 90 0, 100 40, 80 60 C 100 80, 80 100, 50 50"
+                                fill="#0081C6" opacity="0.9" />
+                            <rect x="48" y="40" width="4" height="30" rx="2" fill="#000000" />
+                        </svg>
                     </div>
                     <div>
                         <small style="color:#666;">Hoş Geldin,</small>
@@ -143,11 +150,14 @@
         <!-- Result Screen -->
         <section id="result-screen" class="screen bg-white"
             style="background:#fff; justify-content:center; align-items:center; text-align:center; padding:30px;">
-            <div
-                style="width:150px; height:150px; margin:0 auto 20px; filter: drop-shadow(0 0 30px rgba(250,204,21,0.6));">
-                <img src="./umut.png" alt="Umut Parlıyor"
-                    style="width:100%; height:100%; object-fit:contain; animation: mascotFloat 3s ease-in-out infinite;"
-                    onerror="this.style.display='none'; this.parentElement.innerText='💡'; this.parentElement.style.fontSize='5rem';">
+            <div style="width:120px; height:120px; margin:0 auto 20px;" class="butterfly-container">
+                <svg viewBox="0 0 100 100" class="butterfly flapping" xmlns="http://www.w3.org/2000/svg">
+                    <path class="wing left-wing" d="M50 50 C 10 0, 0 40, 20 60 C 0 80, 20 100, 50 50" fill="#E30613"
+                        opacity="0.9" />
+                    <path class="wing right-wing" d="M50 50 C 90 0, 100 40, 80 60 C 100 80, 80 100, 50 50"
+                        fill="#0081C6" opacity="0.9" />
+                    <rect x="48" y="40" width="4" height="30" rx="2" fill="#000000" />
+                </svg>
             </div>
             <h1 style="color:#10b981; margin-bottom:10px;">Bölüm Tamamlandı!</h1>
             <p style="color:#666; margin-bottom:30px;">Doğrulanmış Bilgi Kalkanını Güçlendirdin.</p>
@@ -162,9 +172,6 @@
         <div id="feedback-overlay"
             style="position:absolute; bottom:0; left:0; width:100%; padding:30px 20px; display:flex; flex-direction:column; gap:20px; border-radius:20px 20px 0 0; transform:translateY(100%); transition:0.3s; z-index:50;">
             <div style="display:flex; align-items:flex-start; gap:15px;">
-                <img src="./umut.png"
-                    style="width:60px; height:60px; object-fit:contain; filter: drop-shadow(0 0 10px rgba(250,204,21,0.4));"
-                    onerror="this.style.display='none';">
                 <div>
                     <h3 id="feedback-title" style="font-size:1.4rem; font-weight:bold; margin-bottom:8px;"></h3>
                     <p id="feedback-message" style="color:#444; line-height:1.4;"></p>
@@ -173,6 +180,19 @@
             <button id="feedback-next-btn" class="btn btn-primary btn-block">Devam Et</button>
         </div>
 
+    </div>
+
+    <!-- Center Screen Butterfly Popup (Hidden by default) -->
+    <div id="center-butterfly-popup"
+        style="position:fixed; top:50%; left:50%; margin-left:-75px; margin-top:-75px; width:150px; height:150px; z-index:9999; display:none; pointer-events:none; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15));">
+        <svg viewBox="0 0 100 100" class="butterfly flapping" xmlns="http://www.w3.org/2000/svg"
+            style="width:100%; height:100%;">
+            <path class="wing left-wing" d="M50 50 C 10 0, 0 40, 20 60 C 0 80, 20 100, 50 50" fill="#E30613"
+                opacity="0.9" />
+            <path class="wing right-wing" d="M50 50 C 90 0, 100 40, 80 60 C 100 80, 80 100, 50 50" fill="#0081C6"
+                opacity="0.9" />
+            <rect x="48" y="40" width="4" height="30" rx="2" fill="#000000" />
+        </svg>
     </div>
 
     <script src="data.js"></script>

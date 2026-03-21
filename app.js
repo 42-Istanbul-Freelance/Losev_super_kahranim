@@ -242,9 +242,23 @@ function evaluateAnswer() {
     feedbackOverlay.classList.remove('hidden', 'correct', 'wrong');
     feedbackOverlay.style.transform = 'translateY(0)';
 
+    const centerPopup = document.getElementById('center-butterfly-popup');
+    if (centerPopup) centerPopup.style.display = 'none';
+
     if (opt.isCorrect) {
         feedbackOverlay.classList.add('correct');
         feedbackTitle.textContent = "Doğrulandı ✅";
+
+        // Ortada belirip kaybolan kelebek animasyonu
+        if (centerPopup) {
+            centerPopup.style.display = 'block';
+            centerPopup.classList.remove('popup-anim');
+            void centerPopup.offsetWidth; // trigger reflow (animasyonu baştan başlat)
+            centerPopup.classList.add('popup-anim');
+            setTimeout(() => {
+                centerPopup.style.display = 'none';
+            }, 1500);
+        }
     } else {
         feedbackOverlay.classList.add('wrong');
         feedbackTitle.textContent = "Hatalı Bilgi ❌";
