@@ -1,1936 +1,297 @@
-// ═══════════════════════════════════════════════════════
-// LÖSEV SÜPER KAHRAMANIM — Application Logic
-// ═══════════════════════════════════════════════════════
+// Authentication Tab Switcher logic
+const tabs = document.querySelectorAll('.tab-btn');
+const forms = document.querySelectorAll('.auth-form');
 
-// ─── DATA LAYER ─────────────────────────────────────────
-function getAllUsers() {
-    return JSON.parse(localStorage.getItem('losevUsers') || '[]');
-}
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        // Toggle active tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
 
-function saveAllUsers(users) {
-    localStorage.setItem('losevUsers', JSON.stringify(users));
-}
-
-function getActiveUserId() {
-    return localStorage.getItem('losevActiveUser') || null;
-}
-
-function setActiveUserId(id) {
-    if (id) localStorage.setItem('losevActiveUser', id);
-    else localStorage.removeItem('losevActiveUser');
-}
-
-function getActiveUser() {
-    const id = getActiveUserId();
-    if (!id) return null;
-    return getAllUsers().find(u => u.id === id) || null;
-}
-
-function updateUser(updatedUser) {
-    const users = getAllUsers();
-    const idx = users.findIndex(u => u.id === updatedUser.id);
-    if (idx !== -1) {
-        users[idx] = updatedUser;
-        saveAllUsers(users);
-    }
-}
-
-// ─── SIMPLE HASH (not secure, just obfuscation) ────────
-function simpleHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash |= 0;
-    }
-    return hash.toString(36);
-}
-
-// ─── TOAST ──────────────────────────────────────────────
-let toastTimeout = null;
-function showToast(message, type = '') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = 'toast' + (type ? ` toast-${type}` : '');
-    // Trigger reflow
-    void toast.offsetWidth;
-    toast.classList.add('show');
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
-}
-
-// ─── NAVIGATION ─────────────────────────────────────────
-const screens = ['login', 'register', 'home', 'profile', 'community', 'profile-detail', 'module-detail', 'hero-upgrade', 'academy', 'minigame', 'badges'];
-const authedScreens = ['home', 'profile', 'community', 'profile-detail', 'module-detail', 'hero-upgrade', 'academy', 'minigame', 'badges'];
-
-function navigateTo(screenName) {
-    // Hide all
-    screens.forEach(s => {
-        const el = document.getElementById(`screen-${s}`);
-        if (el) el.classList.add('hidden');
+        // Toggle active forms
+        const targetFormId = tab.dataset.tab === 'login' ? 'login-form' : 'register-form';
+        forms.forEach(f => {
+            if (f.id === targetFormId) {
+                f.classList.add('active-form');
+            } else {
+                f.classList.remove('active-form');
+            }
+        });
     });
+});
 
-    // Show target
-    const target = document.getElementById(`screen-${screenName}`);
-    if (target) target.classList.remove('hidden');
-
-    // Navbar
-    const navbar = document.getElementById('main-navbar');
-    const isAuthed = authedScreens.includes(screenName);
-
-    if (navbar) {
-        if (isAuthed && !['module-detail', 'hero-upgrade', 'academy', 'badges'].includes(screenName)) {
-            navbar.classList.remove('hidden');
-            // Update active state
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.toggle('active', item.dataset.screen === screenName);
-            });
-        } else {
-            navbar.classList.add('hidden');
-        }
-    }
-
-    // Screen-specific init
-    if (screenName === 'home') renderHome();
-    if (screenName === 'profile') renderProfile();
-    if (screenName === 'community') renderCommunity();
-    if (screenName === 'hero-upgrade') renderUpgradeScreen();
-    if (screenName === 'academy') renderAcademyScreen();
-    if (screenName === 'badges') renderBadges();
-}
-
-// ─── TEMP STATE ─────────────────────────────────────────
-let regState = { avatar: '', avatarBg: '#D6E4FF', ageGroup: '', gender: '' };
-
-function selectAvatar(btn) {
-    regState.avatar = btn.dataset.avatar;
-    regState.avatarBg = btn.dataset.bg;
-    document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-}
-
-// ─── AGE CALCULATION ──────────────────────────────────
-function calculateAge(birthDate) {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
-}
-
-function getAgeGroupFromAge(age) {
-    if (age <= 6) return '3-6';
-    return '6-12';
-}
-
-function selectRegGender(gender) {
-    regState.gender = gender;
-    // Cinsiyete göre varsayılan avatarı da ayarla (Pelerinli/Maskeli Süper Kahraman)
-    regState.avatar = gender === 'girl' ? '🦸‍♀️' : '🦸‍♂️';
-
-    document.getElementById('box-boy').style.borderColor = gender === 'boy' ? 'var(--primary)' : '#E8E8F0';
-    document.getElementById('box-boy').style.backgroundColor = gender === 'boy' ? 'rgba(108, 99, 255, 0.1)' : 'transparent';
-
-    document.getElementById('box-girl').style.borderColor = gender === 'girl' ? 'var(--primary)' : '#E8E8F0';
-    document.getElementById('box-girl').style.backgroundColor = gender === 'girl' ? 'rgba(108, 99, 255, 0.1)' : 'transparent';
-}
-
-// ─── AUTH: REGISTER ────────────────────────────────────
-function doRegister() {
-    const displayName = document.getElementById('reg-displayname').value.trim();
-    const username = document.getElementById('reg-username').value.trim().toLowerCase();
-    const password = document.getElementById('reg-password').value;
-    const birthDate = document.getElementById('reg-birthdate').value;
-
-    if (!displayName) { showToast('Lütfen adını gir!', 'error'); return; }
-    if (!username || username.length < 3) { showToast('Kullanıcı adı en az 3 karakter olmalı!', 'error'); return; }
-    if (/[^a-z0-9_]/.test(username)) { showToast('Kullanıcı adı sadece harf, rakam ve _ içerebilir!', 'error'); return; }
-    if (!password || password.length < 4) { showToast('Şifre en az 4 karakter olmalı!', 'error'); return; }
-    if (!birthDate) { showToast('Lütfen doğum tarihini seç!', 'error'); return; }
-    if (!regState.gender) { showToast('Lütfen cinsiyetini seç!', 'error'); return; }
-
-
-    const users = getAllUsers();
-    if (users.find(u => u.username === username)) {
-        showToast('Bu kullanıcı adı zaten alınmış!', 'error');
-        return;
-    }
-
-    const newUser = {
-        id: Date.now().toString(),
-        username: username,
-        password: simpleHash(password),
-        displayName: displayName,
-        birthDate: birthDate,
-        avatar: regState.avatar || (regState.gender === 'girl' ? '👧' : '👦'), // Use selected avatar, fallback to gender emoji
-        avatarBg: regState.avatarBg || '#D6E4FF', // Use selected avatarBg, fallback to default
-        bio: '',
-        stars: 0,
-        xp: 0,
-        level: 1,
-        stats: { power: 1, speed: 1, intel: 1 },
-        gender: regState.gender,
-        lastLogin: new Date().toISOString().split('T')[0],
-        streak: 1,
-        createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    users.push(newUser);
-    saveAllUsers(users);
-    setActiveUserId(newUser.id);
-
-    // Reset form
-    document.getElementById('reg-displayname').value = '';
-    document.getElementById('reg-username').value = '';
-    document.getElementById('reg-password').value = '';
-    document.getElementById('reg-birthdate').value = '';
-    regState = { avatar: '', avatarBg: '#D6E4FF', ageGroup: '', gender: '' };
-    document.getElementById('box-boy').style.borderColor = '#E8E8F0';
-    document.getElementById('box-boy').style.backgroundColor = 'transparent';
-    document.getElementById('box-girl').style.borderColor = '#E8E8F0';
-    document.getElementById('box-girl').style.backgroundColor = 'transparent';
-    document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
-
-    showToast('Hoş geldin, ' + displayName + '! 🎉', 'success');
-    navigateTo('home');
-}
-
-// ─── AUTH: RESET / CLEAR DATA ─────────────────────────
-function confirmResetData() {
-    if (confirm("⚠️ TÜM İLERLEMEN SİLİNECEK!\n\nHer şeye en baştan başlamak istediğine emin misin? Bu işlem geri alınamaz.")) {
-        resetGameData();
-    }
-}
-
-function resetGameData() {
-    localStorage.clear();
-    showToast('Tüm veriler sıfırlandı. Başa dönülüyor...');
-    setTimeout(() => {
-        window.location.reload();
-    }, 1500);
-}
-
-// ─── AUTH: LOGIN ───────────────────────────────────────
-function doLogin() {
-    const username = document.getElementById('login-username').value.trim().toLowerCase();
-    const password = document.getElementById('login-password').value;
-
-    if (!username || !password) {
-        showToast('Kullanıcı adı ve şifre gerekli!', 'error');
-        return;
-    }
-
-    const users = getAllUsers();
-    const user = users.find(u => u.username === username);
-
-    if (!user || user.password !== simpleHash(password)) {
-        showToast('Kullanıcı adı veya şifre hatalı!', 'error');
-        return;
-    }
-
-    setActiveUserId(user.id);
-
-    // Clear form
-    document.getElementById('login-username').value = '';
-    document.getElementById('login-password').value = '';
-
-    showToast('Tekrar hoş geldin, ' + user.displayName + '! 🚀', 'success');
-    navigateTo('home');
-}
-
-// ─── AUTH: LOGOUT ──────────────────────────────────────
-function doLogout() {
-    setActiveUserId(null);
-    showToast('Çıkış yapıldı 👋');
-    navigateTo('login');
-}
-
-// ─── RENDER: HOME ──────────────────────────────────────
-function renderHome() {
-    const user = getActiveUser();
-    if (!user) { navigateTo('login'); return; }
-
-    const nameEl = document.getElementById('home-displayname');
-    if (nameEl) nameEl.textContent = user.displayName;
-
-    const navAvatarEl = document.getElementById('home-avatar');
-    if (navAvatarEl) {
-        navAvatarEl.textContent = user.avatar;
-        navAvatarEl.style.background = user.avatarBg;
-    }
-
-    const starsEl = document.getElementById('home-stars');
-    if (starsEl) starsEl.textContent = user.stars || 0;
-
-    // Update bottom navbar icon based on gender
-    const navProfileIcon = document.getElementById('navbar-profile-icon');
-    if (navProfileIcon) {
-        navProfileIcon.textContent = user.gender === 'girl' ? '🦸‍♀️' : '🦸‍♂️';
-    }
-
-    // Reset Hero Position
-    const hero = document.getElementById('main-hero');
-    if (hero) {
-        hero.textContent = user.avatar || '🦸';
-        hero.style.left = '50%';
-        hero.style.top = '50%';
-        hero.style.transform = 'translate(-50%, -50%)';
-    }
-
-    renderHeroHub(user);
-    renderFlowerGarden(user);
-    checkAutoCheckin(user);
-    renderMoodTracker(user);
-
-    renderDailyMission(user);
-}
-
-// ─── FLOWER GARDEN ────────────────────────────────────
-// Positive-only: each day checked-in shows a bloomed flower
-// No failures shown — just growth!
-const FLOWER_EMOJIS = ['🌱', '🌷', '🌸', '🌺', '🌻', '🌼', '🌹'];
-
-function renderFlowerGarden(user) {
-    const row = document.getElementById('flower-garden-row');
-    const btn = document.getElementById('fg-checkin-btn');
-    if (!row) return;
-
-    const history = user.streakHistory || {};
-    const today = todayStr();
-    row.innerHTML = '';
-
-    // Show last 7 days — only successes shown as flowers, empty days as seeds
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dayKey = d.toISOString().slice(0, 10);
-        const dayDone = history[dayKey]?.done === true;
-
-        const slot = document.createElement('div');
-        slot.className = 'fg-slot';
-
-        const dayLabel = i === 0 ? 'Bugün' : ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][d.getDay()];
-
-        if (dayDone) {
-            // Pick a flower based on day index for variety
-            const flowerIdx = (d.getDate() + i) % (FLOWER_EMOJIS.length - 1) + 1; // skip 🌱
-            slot.innerHTML = `
-                <div class="fg-flower bloomed">${FLOWER_EMOJIS[flowerIdx]}</div>
-                <div class="fg-day">${dayLabel}</div>
-            `;
-        } else if (i === 0) {
-            // Today — show a seed waiting to bloom
-            slot.innerHTML = `
-                <div class="fg-flower today-seed">🌱</div>
-                <div class="fg-day today-lbl">Bugün</div>
-            `;
-        } else {
-            // Past day without check-in — empty, no guilt
-            slot.innerHTML = `
-                <div class="fg-flower empty-slot">·</div>
-                <div class="fg-day">${dayLabel}</div>
-            `;
-        }
-        row.appendChild(slot);
-    }
-
-    // Update button state
-    if (btn) {
-        const todayDone = history[today]?.done === true;
-        if (todayDone) {
-            btn.textContent = '✅ Tamamlandı!';
-            btn.disabled = true;
-            btn.style.opacity = '0.6';
-        } else {
-            btn.textContent = 'Bugünü Ekle ✨';
-            btn.disabled = false;
-            btn.style.opacity = '1';
-        }
-    }
-}
-
-// ─── DAILY MISSION SYSTEM ────────────────────────────
-function getTodaysMission() {
-    // Pick a mission based on day of year so it rotates daily but is consistent for all users on same day
-    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-    return DAILY_MISSIONS[dayOfYear % DAILY_MISSIONS.length];
-}
-
-function renderDailyMission(user) {
-    const section = document.getElementById('daily-mission-section');
-    if (!section) return;
-
-    const mission = getTodaysMission();
-    const today = todayStr();
-    const isDone = user.completedMissions?.[today] === mission.id;
-
-    if (isDone) {
-        section.innerHTML = `
-            <div class="dm-done">
-                <span class="dm-done-emoji">🎉</span>
-                <span>Bugünkü görevi tamamladın!</span>
-                <strong>+${mission.xp} XP</strong>
-            </div>
-        `;
-        return;
-    }
-
-    section.innerHTML = `
-        <div class="dm-inner" style="border-top: 4px solid ${mission.categoryColor}">
-            <div class="dm-header">
-                <span class="dm-category-badge" style="background:${mission.categoryColor}20;color:${mission.categoryColor}">${mission.category}</span>
-                <span class="dm-xp">+${mission.xp} XP</span>
-            </div>
-            <div class="dm-emoji">${mission.emoji}</div>
-            <div class="dm-title">${mission.title}</div>
-            <div class="dm-task">${mission.task}</div>
-            <div class="dm-show-hint">📱 <em>Kim görecek: ${mission.showTo}</em></div>
-            <div class="dm-actions">
-                <button class="dm-btn-show" onclick="openMissionCard()">Kartı Göster 📱</button>
-                <button class="dm-btn-done" onclick="confirmMissionDone()">Yaptım! ✅</button>
-            </div>
-        </div>
-    `;
-}
-
-function openMissionCard() {
-    const mission = getTodaysMission();
-
-    // Create a full-screen card overlay to show to someone
-    const overlay = document.createElement('div');
-    overlay.id = 'mission-card-overlay';
-    overlay.className = 'mission-card-overlay';
-    overlay.innerHTML = `
-        <div class="mission-show-card" style="border-top: 6px solid ${mission.categoryColor}">
-            <div class="msc-emoji">${mission.emoji}</div>
-            <div class="msc-category">${mission.category}</div>
-            <div class="msc-text">${mission.cardText}</div>
-            <div class="msc-from">— Lösev Süper Kahramanım 🦸</div>
-            <button class="msc-close-btn" onclick="closeMissionCard()">Geri Dön ←</button>
-            <button class="msc-done-btn" onclick="closeMissionCard(); confirmMissionDone()">Yaptım! Rozet Kazan 🏅</button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-    setTimeout(() => overlay.classList.add('visible'), 30);
-}
-
-function closeMissionCard() {
-    const overlay = document.getElementById('mission-card-overlay');
-    if (overlay) {
-        overlay.classList.remove('visible');
-        setTimeout(() => overlay.remove(), 400);
-    }
-}
-
-function confirmMissionDone() {
-    const user = getActiveUser();
-    if (!user) return;
-
-    const mission = getTodaysMission();
-    const today = todayStr();
-
-    if (user.completedMissions?.[today] === mission.id) {
-        showToast('Bugünkü görevi zaten tamamladın! 🎉', 'success');
-        return;
-    }
-
-    if (!user.completedMissions) user.completedMissions = {};
-    user.completedMissions[today] = mission.id;
-    user.xp = (user.xp || 0) + mission.xp;
-
-    // Track doctor appreciation if relevant
-    if (mission.id === 'thank_doctor') {
-        if (!user.doctorAppreciationCount) user.doctorAppreciationCount = 0;
-        user.doctorAppreciationCount++;
-    }
-
-    updateUser(user);
-    checkBadgeUnlocks(user);
-
-    // Celebration popup
-    const popup = document.createElement('div');
-    popup.className = 'streak-badge-popup';
-    popup.style.background = `linear-gradient(135deg, ${mission.categoryColor}, #2c2c60)`;
-    popup.innerHTML = `
-        <div class="badge-emoji">${mission.emoji}</div>
-        <h2>Görev Tamamlandı!</h2>
-        <p>${mission.title} görevini başardın! +${mission.xp} XP kazandın! 🌟</p>
-        ${mission.badgeHint ? `<p style="font-size:0.85rem;opacity:0.9">${mission.badgeHint}</p>` : ''}
-        <button onclick="this.parentElement.remove()" style="background:#fff;color:#333;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Harika! 🎉</button>
-    `;
-    document.body.appendChild(popup);
-    setTimeout(() => popup.classList.add('show'), 50);
-
-    renderDailyMission(user);
-    renderHome(); // refresh XP
-}
-
-
-const MOOD_LABELS = {
-    1: 'Çok zor bir gün... 💜 Buradayız, seninleyiz.',
-    2: 'Biraz yorgunsun... 💙 Bu da geçecek, güçlüsün!',
-    3: 'İdare ediyor... 😊 Süper kahramanlar da dinlenir!',
-    4: 'Bugün iyisin! 🌟 Böyle devam!',
-    5: 'Harika hissediyorsun! 🚀 Bugün her şey mümkün!'
+// Mock Application User State
+const CONSTANTS = {
+    USER_KEY: 'losev_farkindalik_user'
 };
 
-function renderMoodTracker(user) {
-    const today = todayStr();
-    const todayMood = user.moodHistory?.[today];
-    const section = document.getElementById('mood-tracker-section');
-    const labelEl = document.getElementById('mood-label-text');
+const screens = {
+    auth: document.getElementById('auth-screen'),
+    home: document.getElementById('home-screen')
+};
 
-    if (!section) return;
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+const guestBtn = document.getElementById('guest-btn');
 
-    if (todayMood) {
-        // Already selected — show result
-        if (labelEl) labelEl.textContent = MOOD_LABELS[todayMood];
-        const btns = section.querySelectorAll('.mood-btn');
-        btns.forEach((b, i) => {
-            b.classList.toggle('selected', i + 1 === todayMood);
-            b.style.opacity = i + 1 === todayMood ? '1' : '0.4';
-            b.style.pointerEvents = 'none';
-        });
-    } else {
-        if (labelEl) labelEl.textContent = 'Bugün nasıl hissediyorsun? 💜';
-        const btns = section.querySelectorAll('.mood-btn');
-        btns.forEach(b => { b.style.opacity = '1'; b.style.pointerEvents = ''; });
-    }
+const welcomeMessage = document.getElementById('welcome-message');
+const logoutBtn = document.getElementById('logout-btn');
+
+// Global State for App Engine
+let currentUser = null;
+let activeModule = null;
+let currentQuestionIndex = 0;
+let currentHearts = 3;
+let selectedOptionIndex = null;
+let quizQuestions = [];
+
+const MAX_HEARTS = 3;
+
+// Additional DOM Elements for Engine
+screens.quiz = document.getElementById('quiz-screen');
+screens.result = document.getElementById('result-screen');
+
+const learningMap = document.getElementById('learning-map');
+const streakCount = document.getElementById('streak-count');
+const xpCount = document.getElementById('xp-count');
+
+const quizProgress = document.getElementById('quiz-progress');
+const heartCount = document.getElementById('heart-count');
+const questionText = document.getElementById('question-text');
+const optionsContainer = document.getElementById('options-container');
+const checkAnswerBtn = document.getElementById('check-answer-btn');
+const quitQuizBtn = document.getElementById('quit-quiz');
+
+const feedbackOverlay = document.getElementById('feedback-overlay');
+const feedbackTitle = document.getElementById('feedback-title');
+const feedbackMessage = document.getElementById('feedback-message');
+const feedbackNextBtn = document.getElementById('feedback-next-btn');
+
+
+// Initialization: check memory for existing user
+const existingUser = localStorage.getItem(CONSTANTS.USER_KEY);
+if (existingUser) {
+    currentUser = JSON.parse(existingUser);
+    showHome(currentUser.name);
 }
 
-function selectMood(level, btn) {
-    const user = getActiveUser();
-    if (!user) return;
-
-    const today = todayStr();
-    if (!user.moodHistory) user.moodHistory = {};
-    user.moodHistory[today] = level;
-    updateUser(user);
-
-    // Update UI
-    const labelEl = document.getElementById('mood-label-text');
-    if (labelEl) labelEl.textContent = MOOD_LABELS[level];
-
-    const btns = document.querySelectorAll('.mood-btn');
-    btns.forEach((b, i) => {
-        b.classList.toggle('selected', i + 1 === level);
-        b.style.opacity = i + 1 === level ? '1' : '0.4';
-        b.style.pointerEvents = 'none';
-    });
-
-    // Special care response for low moods
-    if (level <= 2) {
-        setTimeout(() => {
-            const popup = document.createElement('div');
-            popup.className = 'streak-badge-popup';
-            popup.style.background = 'linear-gradient(135deg, #A78BFA, #6C63FF)';
-            popup.innerHTML = `
-                <div class="badge-emoji">💜</div>
-                <h2>Seninleyiz!</h2>
-                <p>Zor günler de olacak. Ama sen bir süper kahramansın ve bu süreç seni daha güçlü yapıyor. Biz buradayız! 🌟</p>
-                <button onclick="this.parentElement.remove()" style="background:#fff;color:#6C63FF;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Teşekkürler 💙</button>
-            `;
-            document.body.appendChild(popup);
-            setTimeout(() => popup.classList.add('show'), 50);
-        }, 300);
-    }
-}
-
-// ─── DOCTOR APPRECIATION ─────────────────────────────
-function appreciateDoctor() {
-    const user = getActiveUser();
-    if (!user) return;
-
-    const today = todayStr();
-    if (user.lastDoctorAppreciation === today) {
-        showToast('Bugün zaten teşekkür ettin! 💙 Yarın yeniden söyleyebilirsin.', 'success');
-        return;
-    }
-
-    user.lastDoctorAppreciation = today;
-    user.xp = (user.xp || 0) + 10; // +10 XP bonus
-    user.stars = (user.stars || 0) + 1;
-    if (!user.doctorAppreciationCount) user.doctorAppreciationCount = 0;
-    user.doctorAppreciationCount++;
-
-    updateUser(user);
-    checkBadgeUnlocks(user);
-
-    // Popup
-    const popup = document.createElement('div');
-    popup.className = 'streak-badge-popup';
-    popup.style.background = 'linear-gradient(135deg, #43C6AC, #191654)';
-    popup.innerHTML = `
-        <div class="badge-emoji">💙</div>
-        <h2>Teşekkürün İletildi!</h2>
-        <p>Doktoruna ve hemşirelerine ne kadar değer verdiğini göstermek harikaydı! +10 XP ve +1 ⭐ kazandın!</p>
-        <button onclick="this.parentElement.remove()" style="background:#fff;color:#191654;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Süper! 🌟</button>
-    `;
-    document.body.appendChild(popup);
-    setTimeout(() => popup.classList.add('show'), 50);
-
-    // Re-render home XP
-    renderHome();
-}
-
-// ─── BADGE SYSTEM ────────────────────────────────────
-const ALL_BADGES = [
-    {
-        id: 'first_login',
-        emoji: '🦸',
-        title: 'Süper Kahraman Doğdu!',
-        desc: 'İlk kez uygulamayı açtın.',
-        condition: (u) => true // everyone gets this
-    },
-    {
-        id: 'streak_7',
-        emoji: '🔥',
-        title: '7 Günlük Kahraman',
-        desc: 'Herhangi bir alanda 7 günlük seri yaptın!',
-        condition: (u) => Math.max(u.streaks?.nutrition || 0, u.streaks?.medication || 0, u.streaks?.activity || 0) >= 7
-    },
-    {
-        id: 'streak_30',
-        emoji: '🏆',
-        title: 'Efsane Kahraman',
-        desc: '30 günlük üst üste seri! Gerçek bir süper kahraman!',
-        condition: (u) => Math.max(u.streaks?.nutrition || 0, u.streaks?.medication || 0, u.streaks?.activity || 0) >= 30
-    },
-    {
-        id: 'medication_hero',
-        emoji: '💊',
-        title: 'İlaç Şampiyonu',
-        desc: 'İlaçlarını 14 gün üst üste almayı başardın!',
-        condition: (u) => (u.streaks?.medication || 0) >= 14
-    },
-    {
-        id: 'nutrition_hero',
-        emoji: '🥗',
-        title: 'Sağlıklı Beslenme Ustası',
-        desc: '14 gün üst üste sağlıklı beslendin!',
-        condition: (u) => (u.streaks?.nutrition || 0) >= 14
-    },
-    {
-        id: 'doctor_love',
-        emoji: '💙',
-        title: 'Sevgi Elçisi',
-        desc: 'Doktoruna ve hemşirene ilk kez teşekkür ettin!',
-        condition: (u) => (u.doctorAppreciationCount || 0) >= 1
-    },
-    {
-        id: 'doctor_champion',
-        emoji: '❤️‍🔥',
-        title: 'Takdir Şampiyonu',
-        desc: 'Doktoruna 7 kez teşekkür ettin — sen bir ışıksın!',
-        condition: (u) => (u.doctorAppreciationCount || 0) >= 7
-    },
-    {
-        id: 'brave_heart',
-        emoji: '💜',
-        title: 'Cesur Yürek',
-        desc: 'Zor bir günde bile uygulamayı açtın. Bu cesaret!',
-        condition: (u) => Object.values(u.moodHistory || {}).some(m => m <= 2)
-    },
-    {
-        id: 'level_5',
-        emoji: '🌟',
-        title: 'Yıldız Kahraman',
-        desc: 'Seviye 5\'e ulaştın!',
-        condition: (u) => Math.floor((u.xp || 0) / 100) + 1 >= 5
-    },
-    {
-        id: 'star_collector',
-        emoji: '⭐',
-        title: 'Yıldız Toplayıcı',
-        desc: '50 yıldız kazandın!',
-        condition: (u) => (u.stars || 0) >= 50
-    }
-];
-
-function checkBadgeUnlocks(user) {
-    if (!user.unlockedBadges) user.unlockedBadges = ['first_login'];
-    let newUnlocked = false;
-    ALL_BADGES.forEach(badge => {
-        if (!user.unlockedBadges.includes(badge.id) && badge.condition(user)) {
-            user.unlockedBadges.push(badge.id);
-            newUnlocked = badge;
-        }
-    });
-    if (newUnlocked) {
-        updateUser(user);
-        setTimeout(() => {
-            const popup = document.createElement('div');
-            popup.className = 'streak-badge-popup';
-            popup.innerHTML = `
-                <div class="badge-emoji">${newUnlocked.emoji}</div>
-                <h2>Yeni Rozet!</h2>
-                <p>${newUnlocked.title}: ${newUnlocked.desc}</p>
-                <button onclick="this.parentElement.remove()" style="background:#fff;color:#F7971E;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Harika! 🎉</button>
-            `;
-            document.body.appendChild(popup);
-            setTimeout(() => popup.classList.add('show'), 50);
-        }, 1000);
-    }
-}
-
-function renderBadges() {
-    const user = getActiveUser();
-    if (!user) return;
-    if (!user.unlockedBadges) user.unlockedBadges = ['first_login'];
-
-    // Check for newly unlocked badges
-    checkBadgeUnlocks(user);
-
-    const container = document.getElementById('badges-body');
-    if (!container) return;
-
-    const unlocked = user.unlockedBadges;
-    const total = ALL_BADGES.length;
-    const count = unlocked.length;
-
-    container.innerHTML = `
-        <div class="badges-summary glass-card anim-fade-up">
-            <div class="badges-count">${count} / ${total}</div>
-            <div class="badges-progress-bar">
-                <div class="badges-progress-fill" style="width:${(count / total) * 100}%"></div>
-            </div>
-            <p>${total - count} rozet daha açılmayı bekliyor! 🏅</p>
-        </div>
-        <div class="badges-grid">
-            ${ALL_BADGES.map((badge, i) => {
-        const isUnlocked = unlocked.includes(badge.id);
-        return `
-                    <div class="badge-card ${isUnlocked ? 'unlocked' : 'locked'} anim-fade-up" style="animation-delay:${i * 0.07}s">
-                        <div class="badge-emoji-big">${isUnlocked ? badge.emoji : '🔒'}</div>
-                        <div class="badge-title">${isUnlocked ? badge.title : '???'}</div>
-                        <div class="badge-desc">${isUnlocked ? badge.desc : 'Henüz kilidi açılmadı'}</div>
-                    </div>
-                `;
-    }).join('')}
-        </div>
-    `;
-}
-
-
-const STREAK_BARS = 7; // show last 7 days
-
-function todayStr() {
-    return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-}
-
-function renderStreaks(user) {
-    const streaks = user.streaks || { nutrition: 0, medication: 0, activity: 0 };
-    const history = user.streakHistory || {};
-
-    ['nutrition', 'medication', 'activity'].forEach(key => {
-        const countEl = document.getElementById(`count-${key}`);
-        const trackEl = document.getElementById(`track-${key}`);
-
-        if (countEl) countEl.textContent = `${streaks[key] || 0} 🔥`;
-
-        if (trackEl) {
-            trackEl.innerHTML = '';
-            // Build last 7 days dots
-            for (let i = STREAK_BARS - 1; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const dayKey = d.toISOString().slice(0, 10);
-                const dot = document.createElement('div');
-                dot.className = 'streak-dot' + (history[dayKey]?.[key] === 'yes' ? ' active' : '');
-                trackEl.appendChild(dot);
-            }
-        }
-    });
-
-    // Check if already done today
-    const btn = document.querySelector('.streak-checkin-btn');
-    const alreadyDone = user.streakHistory?.[todayStr()]?.done === true;
-    if (btn && alreadyDone) {
-        btn.textContent = '✅ Bugün Tamamlandı!';
-        btn.disabled = true;
-    }
-}
-
-function checkAutoCheckin(user) {
-    // Auto-show if not done today and user logged in (not on first visit ever)
-    if (!user.streakHistory) return; // brand new user, skip
-    const alreadyDone = user.streakHistory?.[todayStr()]?.done === true;
-    if (!alreadyDone) {
-        // slight delay so home renders first
-        setTimeout(() => openDailyCheckin(), 600);
-    }
-}
-
-// ─── CHECK-IN STATE ─────────────────────────────────
-let checkinAnswers = {};
-
-function openDailyCheckin() {
-    const user = getActiveUser();
-    if (!user) return;
-    if (user.streakHistory?.[todayStr()]?.done) {
-        showToast('Bugünü zaten tamamladın! 🎉', 'success');
-        return;
-    }
-    checkinAnswers = {};
-    // Reset steps
-    [1, 2, 3].forEach(n => {
-        const s = document.getElementById(`checkin-step-${n}`);
-        if (s) s.classList.toggle('hidden', n !== 1);
-    });
-    document.querySelectorAll('.checkin-opt').forEach(b => b.classList.remove('selected'));
-    document.querySelectorAll('.checkin-chip').forEach(b => b.classList.remove('active'));
-    const sub = document.getElementById('nutrition-sub');
-    if (sub) sub.style.display = 'none';
-    const lbl = document.getElementById('checkin-step-label');
-    if (lbl) lbl.textContent = 'Adım 1 / 3';
-
-    document.getElementById('checkin-modal').classList.remove('hidden');
-}
-
-function selectCheckinAnswer(key, val, btn) {
-    checkinAnswers[key] = val;
-    // Highlight
-    btn.closest('.checkin-options').querySelectorAll('.checkin-opt').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    // Show sub-options for nutrition yes
-    if (key === 'nutrition') {
-        const sub = document.getElementById('nutrition-sub');
-        if (sub) sub.style.display = val === 'yes' ? 'block' : 'none';
-    }
-}
-
-function toggleChip(btn) {
-    btn.classList.toggle('active');
-}
-
-function nextCheckinStep(from) {
-    const key = from === 1 ? 'nutrition' : 'medication';
-    if (!checkinAnswers[key]) {
-        showToast('Lütfen bir cevap seç! 👆', 'error');
-        return;
-    }
-    document.getElementById(`checkin-step-${from}`).classList.add('hidden');
-    document.getElementById(`checkin-step-${from + 1}`).classList.remove('hidden');
-    const lbl = document.getElementById('checkin-step-label');
-    if (lbl) lbl.textContent = `Adım ${from + 1} / 3`;
-}
-
-function submitCheckin() {
-    if (!checkinAnswers.activity) {
-        showToast('Lütfen bir cevap seç! 👆', 'error');
-        return;
-    }
-
-    const user = getActiveUser();
-    if (!user) return;
-
-    const today = todayStr();
-
-    // Init structures
-    if (!user.streaks) user.streaks = { nutrition: 0, medication: 0, activity: 0 };
-    if (!user.streakHistory) user.streakHistory = {};
-
-    // Get yesterday
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yKey = yesterday.toISOString().slice(0, 10);
-
-    ['nutrition', 'medication', 'activity'].forEach(key => {
-        const ans = checkinAnswers[key];
-        // Update streak count
-        if (ans === 'yes') {
-            const prevDoneYes = user.streakHistory?.[yKey]?.[key] === 'yes';
-            user.streaks[key] = prevDoneYes ? (user.streaks[key] || 0) + 1 : 1;
-        } else {
-            user.streaks[key] = 0; // broken
-        }
-
-        if (!user.streakHistory[today]) user.streakHistory[today] = {};
-        user.streakHistory[today][key] = ans;
-    });
-
-    user.streakHistory[today].done = true;
-
-    // XP bonus for completing
-    const yesCount = Object.values(checkinAnswers).filter(v => v === 'yes').length;
-    user.xp = (user.xp || 0) + yesCount * 5; // +5 XP per yes answer
-
-    updateUser(user);
-
-    // Close modal
-    document.getElementById('checkin-modal').classList.add('hidden');
-
-    // Show celebration
-    showStreakCelebration(user.streaks, yesCount);
-
-    // Re-render
-    renderStreaks(user);
-}
-
-function showStreakCelebration(streaks, yesCount) {
-    const maxStreak = Math.max(streaks.nutrition || 0, streaks.medication || 0, streaks.activity || 0);
-
-    let emoji = '🌟', title = 'Harika iş!', msg = 'Bugünkü görevini tamamladın!';
-
-    if (yesCount === 3) { emoji = '🏆'; title = 'Mükemmel! Tam Puan!'; msg = 'Üç alanda da zafer! +15 XP kazandın!'; }
-    else if (yesCount === 2) { emoji = '💪'; title = 'Çok iyi!'; msg = `${yesCount} görev tamamlandı! +10 XP kazandın!`; }
-    else { emoji = '😊'; title = 'Devam et!'; msg = 'Yarın her alanda tam yapabilirsin!'; }
-
-    if (maxStreak >= 30) { emoji = '🦸'; title = 'EFSANE KAHRAMAN!'; msg = '30 günlük seri! Sen gerçek bir süper kahramansın!'; }
-    else if (maxStreak >= 7) { emoji = '🔥'; title = '7 Günlük Seri!'; msg = 'Bir haftayı doldurdun! Süper kahraman madalyası!'; }
-
-    const popup = document.createElement('div');
-    popup.className = 'streak-badge-popup';
-    popup.innerHTML = `
-        <div class="badge-emoji">${emoji}</div>
-        <h2>${title}</h2>
-        <p>${msg}</p>
-        <button onclick="this.parentElement.remove()" style="background:#fff;color:#F7971E;border:none;border-radius:12px;padding:10px 24px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">Harika! 🎉</button>
-    `;
-    document.body.appendChild(popup);
-    setTimeout(() => popup.classList.add('show'), 50);
-}
-
-
-
-function renderHeroHub(user) {
-    const wrapper = document.getElementById('hub-modules-wrapper');
-    if (!wrapper) return;
-    wrapper.innerHTML = '';
-
-    const age = calculateAge(user.birthDate);
-    const ageGroup = getAgeGroupFromAge(age);
-
-    // Position modules in a circle (Dynamic Radius for mobile)
-    const containerWidth = document.querySelector('.hero-hub-container')?.offsetWidth || 360;
-    const radius = Math.min(containerWidth / 2.6, 140);
-
-    const hubModules = [...modulesData];
-
-    hubModules.forEach((mod, i) => {
-        const angle = (i * (360 / hubModules.length) - 90) * (Math.PI / 180);
-        const x = Math.cos(angle) * radius;
-        const y = Math.sin(angle) * radius;
-
-        const btn = document.createElement('div');
-        btn.className = 'hub-module';
-
-        // İyileşme (eski Akademi) modülüne özel renk verilebilir
-        if (mod.id === 'iyilesme') btn.style.background = 'rgba(255, 215, 0, 0.9)';
-
-        btn.style.left = `calc(50% + ${x}px - 40px)`;
-        btn.style.top = `calc(50% + ${y}px - 40px)`;
-        btn.style.animationDelay = `${i * 0.1}s`;
-
-        btn.innerHTML = `
-            <div class="hm-icon">${mod.icon}</div>
-            <div class="hm-label">${mod.title}</div>
-        `;
-
-        btn.onclick = (e) => {
-            moveHeroAndNavigate(mod.id, x, y);
-        };
-        wrapper.appendChild(btn);
-    });
-}
-
-function moveHeroAndNavigate(moduleId, x, y) {
-    const hero = document.getElementById('main-hero');
-    if (!hero) return;
-
-    // Move hero to module
-    hero.style.left = `calc(50% + ${x}px)`;
-    hero.style.top = `calc(50% + ${y}px)`;
-    hero.style.transform = 'translate(-50%, -50%) scale(1.2)';
-
-    // Wait for animation then navigate
-    setTimeout(() => {
-        if (moduleId === 'academy') {
-            navigateTo('academy');
-        } else {
-            showModuleDetail(moduleId);
-        }
-    }, 600);
-}
-
-let globalCurrentModule = null;
-
-// ─── RENDER: MODULE DETAIL (LEVEL MAP) ─────────────────
-function showModuleDetail(moduleId) {
-    const user = getActiveUser();
-    if (!user) return;
-
-    const mod = modulesData.find(m => m.id === moduleId);
-    if (!mod) return;
-
-    globalCurrentModule = moduleId;
-
-    // Faz 6 / Faz 8: İlk açılışta modül verisini hazırlıyoruz.
-    // heroMode'da olsak bile harita için `completedLevels` array'ine ihtiyaç var.
-    if (!user.pets) user.pets = {};
-    if (!user.pets[moduleId]) {
-        user.pets[moduleId] = { food: 5, happiness: 0, completedLevels: [] };
-        updateUser(user);
-    }
-
-    const petData = user.pets[moduleId];
-
-    // Header
-    const header = document.getElementById('module-detail-header');
-    header.style.background = mod.colorDark;
-    document.getElementById('module-detail-title').textContent = mod.title;
-    document.getElementById('module-detail-desc').textContent = mod.description;
-    document.getElementById('module-detail-icon').textContent = mod.icon;
-
-    // Panel Geçişi (Pet vs Hero)
-    const petPanel = document.getElementById('pet-panel-ui');
-    const heroPanel = document.getElementById('hero-panel-ui');
-
-    if (mod.heroMode) {
-        petPanel.classList.add('hidden');
-        heroPanel.classList.remove('hidden');
-
-        // Hero Init
-        if (!user.health) user.health = 20; // Başlangıç sağlığı (Örn: %20)
-
-        document.getElementById('hero-panel-emoji').textContent = user.avatar;
-        document.getElementById('hero-panel-name').textContent = user.displayName;
-        document.getElementById('hero-health-fill').style.width = `${user.health}%`;
-
-        const heroStatus = document.getElementById('hero-panel-status');
-        // Kullanıcının "Öğrenim Durumu" için metin yerine görsel/icon (emoji) bırakıyoruz.
-        if (user.health >= 80) heroStatus.innerHTML = '<span style="font-size:1.2rem;">🎓</span>';
-        else if (user.health >= 50) heroStatus.innerHTML = '<span style="font-size:1.2rem;">📚</span>';
-        else heroStatus.innerHTML = '<span style="font-size:1.2rem;">📖</span>';
-
-    } else {
-        petPanel.classList.remove('hidden');
-        heroPanel.classList.add('hidden');
-
-        // Pet UI
-        document.getElementById('pet-emoji').textContent = mod.pet.emoji;
-        document.getElementById('pet-name').textContent = mod.pet.name;
-        document.getElementById('pet-food-icon').textContent = mod.pet.foodIcon;
-        document.getElementById('pet-food-amount').textContent = petData.food;
-        document.getElementById('pet-happiness-fill').style.width = `${petData.happiness}%`;
-
-        const statusEl = document.getElementById('pet-status');
-        if (petData.happiness > 50) {
-            statusEl.textContent = 'Mutlu! 🥰';
-        } else if (petData.happiness > 0) {
-            statusEl.textContent = 'Uyanık! 👀';
-        } else {
-            statusEl.textContent = 'Zzz... 😴';
-        }
-
-        const feedBtn = document.getElementById('feed-pet-btn');
-        feedBtn.disabled = petData.food <= 0 || petData.happiness >= 100;
-    }
-
-    // Level Map
-    const mapContainer = document.getElementById('level-map-container');
-    mapContainer.innerHTML = ''; // Temizle
-
-    // Dinamik kıvrımlı SVG yolu oluşturma
-    // Her bir düğüm (node) yaklaşık 120px dikey yer kaplayacak
-    const nodeHeight = 120;
-    const totalHeight = mod.levels.length * nodeHeight;
-    let pathD = `M 50 0 `;
-
-    for (let i = 0; i < mod.levels.length; i++) {
-        const startY = i * nodeHeight;
-        const endY = (i + 1) * nodeHeight;
-        // Çift/Tek index'e göre sağa veya sola doğru kıvrım ver
-        const controlX = i % 2 === 0 ? 90 : 10;
-        pathD += `C ${controlX} ${startY + nodeHeight / 3}, ${controlX} ${endY - nodeHeight / 3}, 50 ${endY} `;
-    }
-
-    const svgHTML = `
-    <svg class="level-path-svg" viewBox="0 0 100 ${totalHeight}" preserveAspectRatio="none" style="height: ${totalHeight}px;">
-        <path fill="transparent" stroke="${mod.colorDark}" stroke-opacity="0.3" d="${pathD}" class="animated"></path>
-    </svg>`;
-    mapContainer.innerHTML = svgHTML;
-
-    // Petin (Maskot) haritadaki pozisyonu bulacağız
-    let petPlaced = false;
-
-    mod.levels.forEach((lvl, index) => {
-        const completedLevels = petData?.completedLevels || [];
-        const isCompleted = completedLevels.includes(lvl.id);
-        const isNext = !isCompleted && (index === 0 || completedLevels.includes(mod.levels[index - 1].id));
-        const isLocked = !isCompleted && !isNext;
-
-        let nodeClass = 'level-node';
-        let icon = '⭐';
-        if (isLocked) {
-            nodeClass += ' locked';
-            icon = '🔒';
-        } else if (isCompleted) {
-            nodeClass += ' completed';
-            icon = '✔️';
-        } else if (isNext) {
-            nodeClass += ' active anim-pop';
-            icon = lvl.type === 'quiz' ? '❓' : '💡';
-        }
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'level-node-wrapper anim-fade-up';
-        wrapper.style.animationDelay = `${(index % 5) * 0.1}s`; // Stagger animation
-
-        // Maskot/Hero yerleşimi için bilgileri ayır, mapContainer'a ayrı ekleyeceğiz
-        if (isNext && !petPlaced) {
-            petPlaced = true;
-
-            const petTop = (index * 120);
-            const petLeft = index % 2 === 0 ? '70%' : '30%';
-
-            const petMarker = document.createElement('div');
-            petMarker.className = 'map-pet anim-pop';
-            petMarker.id = 'active-map-pet';
-            petMarker.style.top = `calc(${petTop}px - 20px)`;
-            petMarker.style.left = `calc(${petLeft} - 25px)`;
-
-            const avatarEmoji = mod.heroMode ? user.avatar : mod.pet.emoji;
-
-            petMarker.innerHTML = `
-                <div class="map-pet-emoji">${avatarEmoji}</div>
-                <div class="map-pet-tooltip">Buradayım!</div>
-            `;
-            setTimeout(() => mapContainer.appendChild(petMarker), 10);
-        }
-
-        const iconLabel = mod.heroMode ? 'Sağlık' : mod.pet.foodIcon;
-
-        wrapper.innerHTML = `
-            <div class="${nodeClass}" onclick="${isLocked || isCompleted ? '' : `handleLevelClick('${moduleId}', ${lvl.id}, '${lvl.type}', ${lvl.xp}, ${lvl.targetFood})`}">
-                <div class="level-node-icon">${icon}</div>
-                <div class="level-node-stars">+${lvl.xp} XP | +${lvl.targetFood} ${iconLabel}</div>
-            </div>
-            <div style="position:absolute; top:30%; ${index % 2 === 0 ? 'right:5%' : 'left:5%'}; font-weight:800; font-size:0.8rem; color: #666; width: 35%; text-align: ${index % 2 === 0 ? 'right' : 'left'};">
-                ${lvl.title}
-            </div>
-        `;
-        mapContainer.appendChild(wrapper);
-    });
-
-    // Eğer hepsi bittiyse maskotu son node'a koy
-    if (!petPlaced && mod.levels.length > 0) {
-        const lastWrapper = mapContainer.lastElementChild;
-        if (lastWrapper) {
-            const avatarEmoji = mod.heroMode ? user.avatar : mod.pet.emoji;
-            lastWrapper.insertAdjacentHTML('afterbegin', `<div class="map-pet anim-pop"><div class="map-pet-emoji">${avatarEmoji}</div></div>`);
-        }
-    }
-
-    navigateTo('module-detail');
-}
-
-// ─── PET FEEDING & LEVEL LOGIC ─────────────────────────────
-function handleLevelClick(moduleId, levelId, levelType, xpAmount, foodAmount) {
-    const user = getActiveUser();
-    if (!user) return;
-
-    const mod = modulesData.find(m => m.id === moduleId);
-    const petData = user.pets ? user.pets[moduleId] : null;
-
-    // Faz 6: Yem / Mutluluk Şartı (Pet Açsa Level Oynanamaz)
-    // Eğer heroMode aktifse bu kontrolü atla
-    if (!mod.heroMode && petData && petData.happiness < 20) {
-        showToast("🐾 Önce dostunu beslemelisin!", "error");
-
-        // Sadece küçük bir sarsıntı efekti verelim
-        const petPanel = document.querySelector('.pet-panel');
-        if (petPanel) {
-            petPanel.style.transform = "translateX(10px)";
-            setTimeout(() => petPanel.style.transform = "translateX(-10px)", 100);
-            setTimeout(() => petPanel.style.transform = "translateX(10px)", 200);
-            setTimeout(() => petPanel.style.transform = "translateX(0)", 300);
-        }
-        return;
-    }
-
-    if (levelType === 'drag-drop') {
-        openMiniGame(moduleId, levelId, xpAmount, foodAmount);
-    } else {
-        completeLevel(moduleId, levelId, xpAmount, foodAmount);
-    }
-}
-
-function completeLevel(moduleId, levelId, xpAmount, foodAmount) {
-    const user = getActiveUser();
-    if (!user) return;
-
-    const mod = modulesData.find(m => m.id === moduleId);
-    const intelStat = user.stats?.intel || 1;
-    const bonusXp = Math.floor(xpAmount * (1 + (intelStat * 0.1)));
-
-    // Grant XP and Food (Or Health)
-    user.xp = (user.xp || 0) + bonusXp;
-
-    if (mod.heroMode) {
-        // Kahraman modu ise sağlık kazan (Maximum 100)
-        user.health = Math.min(100, (user.health || 0) + foodAmount * 10);
-    } else {
-        user.pets[moduleId].food += foodAmount;
-    }
-
-    user.pets[moduleId].completedLevels.push(levelId);
-
-    // Level up check
-    const newLevel = Math.floor(user.xp / 100) + 1;
-    if (newLevel > (user.level || 1)) {
-        user.level = newLevel;
-        showToast(`🎉 SEVİYE ${newLevel} OLDUN!`);
-    }
-
-    updateUser(user);
-
-    if (mod.heroMode) {
-        showToast(`+${bonusXp} XP ve +Sağlık Puanı kazandın!`);
-    } else {
-        showToast(`+${bonusXp} XP ve +${foodAmount} Yem kazandın!`);
-    }
-
-    // Maskotu yavaşça bir sonraki node'a kaydır (Soft Transition)
-    const petElement = document.getElementById('active-map-pet');
-    const nodes = document.querySelectorAll('.level-node-wrapper');
-    const nextNodeIndex = user.pets[moduleId].completedLevels.length;
-
-    if (petElement && nextNodeIndex < nodes.length) {
-        petElement.style.transition = 'top 1s ease-in-out, left 1s ease-in-out';
-        const petTop = (nextNodeIndex * 120);
-        const petLeft = nextNodeIndex % 2 === 0 ? '70%' : '30%';
-
-        petElement.style.top = `calc(${petTop}px - 20px)`;
-        petElement.style.left = `calc(${petLeft} - 25px)`;
-
-        // 1 saniye sonra haritayı tam yenile
-        setTimeout(() => {
-            showModuleDetail(moduleId);
-        }, 1000);
-    } else {
-        // Maskot yoksa anında yenile
-        showModuleDetail(moduleId);
-    }
-}
-
-// ─── ETKİLEŞİMLİ MİNİ OYUN (DRAG & DROP - FAZ 7) ────────────
-let activeMiniGame = null;
-
-function openMiniGame(moduleId, levelId, xpAmount, foodAmount) {
-    const mod = modulesData.find(m => m.id === moduleId);
-    const lvl = mod.levels.find(l => l.id === levelId);
-    if (!mod || !lvl || !lvl.gameData) return;
-
-    activeMiniGame = {
-        moduleId, levelId, xpAmount, foodAmount,
-        energy: 0,
-        gameData: lvl.gameData,
-        petEmoji: mod.pet.emoji
-    };
-
-    // UI Setup
-    document.getElementById('minigame-title').textContent = lvl.title;
-    document.getElementById('minigame-instruction').textContent = lvl.gameData.heroTitle || 'Beni Besle!';
-
-    // Eğer oyuna özel bir hedef emoji varsa onu kullan, yoksa avatar/pet emojisi.
-    const avatarEmoji = lvl.gameData.targetEmoji || (mod.heroMode ? getActiveUser().avatar : mod.pet.emoji);
-    document.querySelector('.hero-avatar-large').textContent = avatarEmoji;
-
-    // Reset Energy & Feedback
-    document.getElementById('minigame-energy').style.width = '0%';
-    document.getElementById('minigame-energy').style.backgroundColor = 'var(--success)';
-    document.getElementById('minigame-feedback').classList.add('hidden');
-    document.getElementById('feedback-continue-btn').classList.add('hidden');
-
-    const dragHint = document.getElementById('drag-hint');
-    if (dragHint) dragHint.style.display = 'block';
-
-    const itemsContainer = document.getElementById('draggable-items-container');
-    itemsContainer.innerHTML = ''; // Temizle
-
-    // Eşyaları Yarat
-    lvl.gameData.items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'drag-item';
-
-        // Eğer hero-sleep ise, kullanıcının kendi avatarını göster
-        if (item.id === 'hero-sleep') {
-            div.textContent = getActiveUser().avatar;
-        } else {
-            div.textContent = item.icon;
-        }
-
-        div.draggable = true;
-        div.dataset.id = item.id;
-        div.dataset.isGood = item.isGood;
-        div.dataset.message = item.message;
-
-        // Desktop Events
-        div.addEventListener('dragstart', handleDragStart);
-        div.addEventListener('dragend', handleDragEnd);
-
-        // Mobile Touch Events
-        div.addEventListener('touchstart', handleTouchStart, { passive: false });
-        div.addEventListener('touchmove', handleTouchMove, { passive: false });
-        div.addEventListener('touchend', handleTouchEnd);
-
-        itemsContainer.appendChild(div);
-    });
-
-    // Dropzone Events (Desktop)
-    const dropZone = document.getElementById('hero-drop-zone');
-    dropZone.addEventListener('dragover', handleDragOver);
-    dropZone.addEventListener('dragleave', handleDragLeave);
-    dropZone.addEventListener('drop', handleDrop);
-
-    navigateTo('minigame');
-}
-
-function closeMiniGame() {
-    activeMiniGame = null;
-    navigateTo('module-detail');
-}
-
-function continueMiniGame() {
-    if (!activeMiniGame) return;
-
-    const { moduleId, levelId, xpAmount, foodAmount } = activeMiniGame;
-
-    // Önce mini oyunu kapat ve harita ekranını visible yap (animasyonun görünmesi için CSS engine frame atlamasın)
-    closeMiniGame();
-
-    // Kazanımı ver ve harita üzerindeki animasyonu başlat
-    setTimeout(() => {
-        completeLevel(moduleId, levelId, xpAmount, foodAmount);
-    }, 50);
-}
-
-// DRAG EVENT HANDLERS (DESKTOP)
-let draggedItemInfo = null;
-
-function handleDragStart(e) {
-    e.dataTransfer.setData('text/plain', e.target.dataset.id);
-    draggedItemInfo = {
-        element: e.target,
-        isGood: e.target.dataset.isGood === 'true',
-        message: e.target.dataset.message
-    };
-    setTimeout(() => e.target.style.opacity = '0.5', 0);
-
-    const dragHint = document.getElementById('drag-hint');
-    if (dragHint) dragHint.style.display = 'none';
-}
-
-function handleDragEnd(e) {
-    e.target.style.opacity = '1';
-    draggedItemInfo = null;
-}
-
-function handleDragOver(e) {
+// Event Listeners for Forms
+loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    document.getElementById('hero-drop-zone').classList.add('active');
-}
+    const email = document.getElementById('login-email').value.trim();
+    const name = email.split('@')[0];
+    initUser(name, email);
+});
 
-function handleDragLeave(e) {
-    document.getElementById('hero-drop-zone').classList.remove('active');
-}
-
-function handleDrop(e) {
+registerForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    document.getElementById('hero-drop-zone').classList.remove('active');
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    initUser(name, email);
+});
 
-    if (draggedItemInfo) {
-        processGameDrop(draggedItemInfo);
-    }
-}
+guestBtn.addEventListener('click', () => {
+    initUser("Misafir Kullanıcı", "guest");
+});
 
-// TOUCH EVENT HANDLERS (MODERN MOBILE DRAG)
-let touchDraggedElement = null;
+logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem(CONSTANTS.USER_KEY);
+    currentUser = null;
+    showAuth();
+});
 
-function handleTouchStart(e) {
-    touchDraggedElement = e.target;
-    draggedItemInfo = {
-        element: e.target,
-        isGood: e.target.dataset.isGood === 'true',
-        message: e.target.dataset.message
+function initUser(name, email) {
+    // If it's a completely new init
+    currentUser = {
+        name,
+        email,
+        xp: 0,
+        streak: 1,
+        completed: [],
+        lastLogin: new Date().toLocaleDateString()
     };
-    e.target.style.opacity = '0.8';
-    e.target.style.position = 'absolute';
-    e.target.style.zIndex = '1000';
-
-    const dragHint = document.getElementById('drag-hint');
-    if (dragHint) dragHint.style.display = 'none';
-
-    // Elementi touch kordinatlarına taşı
-    const touch = e.touches[0];
-    moveElementTo(e.target, touch.clientX, touch.clientY);
+    saveState();
+    showHome(currentUser.name);
 }
 
-function handleTouchMove(e) {
-    e.preventDefault(); // Ekran scrollunu engelle
-    const touch = e.touches[0];
-    moveElementTo(touchDraggedElement, touch.clientX, touch.clientY);
+function saveState() {
+    if (currentUser) localStorage.setItem(CONSTANTS.USER_KEY, JSON.stringify(currentUser));
+}
 
-    // Dropzone üstünde duruyor mu hesapla
-    const dropZone = document.getElementById('hero-drop-zone');
-    const dropRect = dropZone.getBoundingClientRect();
+function showHome(name) {
+    screens.auth.classList.remove('active');
+    if (screens.quiz) screens.quiz.classList.remove('active');
+    if (screens.result) screens.result.classList.remove('active');
+    screens.home.classList.add('active');
 
-    if (
-        touch.clientX >= dropRect.left &&
-        touch.clientX <= dropRect.right &&
-        touch.clientY >= dropRect.top &&
-        touch.clientY <= dropRect.bottom
-    ) {
-        dropZone.classList.add('active');
+    welcomeMessage.textContent = name;
+    updateStats();
+    renderMap();
+}
+
+function showAuth() {
+    screens.home.classList.remove('active');
+    if (screens.quiz) screens.quiz.classList.remove('active');
+    if (screens.result) screens.result.classList.remove('active');
+    screens.auth.classList.add('active');
+
+    loginForm.reset();
+    registerForm.reset();
+}
+
+function updateStats() {
+    streakCount.textContent = currentUser.streak;
+    xpCount.textContent = currentUser.xp;
+}
+
+// Map Rendering Engine
+function renderMap() {
+    learningMap.innerHTML = '';
+
+    let isPrevCompleted = true; // First module always unlocked
+
+    SEED_DATA.modules.forEach((module, i) => {
+        const isCompleted = currentUser.completed.includes(module.id);
+        const isLocked = !isCompleted && !isPrevCompleted;
+
+        const node = document.createElement('div');
+        node.className = 'module-node';
+
+        const circle = document.createElement('div');
+        circle.className = `module-circle ${isLocked ? 'locked' : ''}`;
+        circle.textContent = module.icon;
+
+        const label = document.createElement('div');
+        label.className = 'module-label';
+        label.textContent = module.title;
+
+        node.appendChild(circle);
+        node.appendChild(label);
+
+        if (!isLocked) {
+            node.addEventListener('click', () => startQuiz(module));
+        }
+
+        learningMap.appendChild(node);
+        isPrevCompleted = isCompleted;
+    });
+}
+
+// Quiz Flow
+quitQuizBtn.addEventListener('click', () => {
+    if (confirm("Görevi bırakmak istiyorsunuz. İlerlemeniz kaybedilecek, emin misiniz?")) {
+        showHome(currentUser.name);
+    }
+});
+
+function startQuiz(module) {
+    activeModule = module;
+    quizQuestions = module.questions;
+    currentQuestionIndex = 0;
+    currentHearts = MAX_HEARTS;
+    selectedOptionIndex = null;
+
+    heartCount.textContent = currentHearts;
+    updateProgress();
+    showQuestion();
+
+    // Switch screen
+    screens.home.classList.remove('active');
+    screens.quiz.classList.add('active');
+}
+
+function updateProgress() {
+    const pt = (currentQuestionIndex / quizQuestions.length) * 100;
+    quizProgress.style.width = `${pt}%`;
+}
+
+function showQuestion() {
+    selectedOptionIndex = null;
+    checkAnswerBtn.disabled = true;
+    checkAnswerBtn.textContent = "Kontrol Et";
+    optionsContainer.innerHTML = '';
+
+    const q = quizQuestions[currentQuestionIndex];
+    questionText.textContent = q.text;
+
+    q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.innerHTML = `<span class="quiz-opt-num">${idx + 1}</span> <span>${opt.text}</span>`;
+        btn.addEventListener('click', () => selectOption(idx, btn));
+        optionsContainer.appendChild(btn);
+    });
+}
+
+function selectOption(index, btnNode) {
+    selectedOptionIndex = index;
+    document.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected'));
+    btnNode.classList.add('selected');
+    checkAnswerBtn.disabled = false;
+}
+
+checkAnswerBtn.addEventListener('click', evaluateAnswer);
+
+function evaluateAnswer() {
+    if (selectedOptionIndex === null) return;
+    checkAnswerBtn.disabled = true;
+
+    const q = quizQuestions[currentQuestionIndex];
+    const opt = q.options[selectedOptionIndex];
+
+    feedbackOverlay.classList.remove('hidden', 'correct', 'wrong');
+    feedbackOverlay.style.transform = 'translateY(0)';
+
+    if (opt.isCorrect) {
+        feedbackOverlay.classList.add('correct');
+        feedbackTitle.textContent = "Doğrulandı ✅";
     } else {
-        dropZone.classList.remove('active');
-    }
-}
-
-function handleTouchEnd(e) {
-    if (!touchDraggedElement) return;
-
-    const touch = e.changedTouches[0];
-    const dropZone = document.getElementById('hero-drop-zone');
-    const dropRect = dropZone.getBoundingClientRect();
-
-    dropZone.classList.remove('active');
-    touchDraggedElement.style.opacity = '1';
-    touchDraggedElement.style.position = 'static';
-    touchDraggedElement.style.zIndex = 'auto';
-    touchDraggedElement.style.transform = 'none';
-
-    // Dropzone içerisine mi bırakıldı?
-    if (
-        touch.clientX >= dropRect.left &&
-        touch.clientX <= dropRect.right &&
-        touch.clientY >= dropRect.top &&
-        touch.clientY <= dropRect.bottom
-    ) {
-        processGameDrop(draggedItemInfo);
+        feedbackOverlay.classList.add('wrong');
+        feedbackTitle.textContent = "Hatalı Bilgi ❌";
+        currentHearts--;
+        heartCount.textContent = currentHearts;
     }
 
-    touchDraggedElement = null;
-    draggedItemInfo = null;
+    feedbackMessage.textContent = opt.explanation;
 }
 
-function moveElementTo(el, x, y) {
-    if (!el) return;
-    el.style.left = (x - el.offsetWidth / 2) + 'px';
-    el.style.top = (y - el.offsetHeight / 2) + 'px';
-}
-
-function processGameDrop(info) {
-    if (!activeMiniGame) return;
-
-    const energyBar = document.getElementById('minigame-energy');
-    const gameData = activeMiniGame.gameData;
-
-    // Özel Oyun Mantığı: El Yıkama (Soap -> Water)
-    if (gameData.subType === 'wash-hands') {
-        const dropZoneAvatar = document.querySelector('.hero-avatar-large');
-
-        if (info.element.dataset.id === 'soap') {
-            activeMiniGame.energy = 50;
-            energyBar.style.width = '50%';
-            energyBar.style.backgroundColor = 'var(--secondary)';
-            dropZoneAvatar.innerHTML = '<span style="position:relative;">🖐️<span style="position:absolute; top:0; left:0; font-size:1.5rem;">🧼</span></span>';
-            showMiniGameFeedback("Köpük Zamanı!", info.message, "var(--success)", "🧼");
-            info.element.style.display = 'none';
-            activeMiniGame.soapApplied = true;
-        } else if (info.element.dataset.id === 'water') {
-            if (activeMiniGame.soapApplied) {
-                activeMiniGame.energy = 100;
-                energyBar.style.width = '100%';
-                energyBar.style.backgroundColor = 'var(--success)';
-                dropZoneAvatar.innerHTML = '✨🖐️✨';
-                document.getElementById('feedback-continue-btn').classList.remove('hidden');
-                showMiniGameFeedback("Harika!", info.message, "var(--success)", "✨", true);
-                info.element.style.display = 'none';
-
-                // Konfeti fırlat
-                const effect = document.createElement('div');
-                effect.className = 'food-effect anim-float-up';
-                effect.textContent = '🎉';
-                effect.style.left = '50%';
-                effect.style.top = '50%';
-                document.getElementById('hero-drop-zone').appendChild(effect);
-                setTimeout(() => effect.remove(), 1000);
-
-            } else {
-                // Sabun sürmeden su tutarsa hata/uyarı ver
-                activeMiniGame.energy = 0;
-                energyBar.style.width = '0%';
-                energyBar.style.backgroundColor = 'var(--error)';
-                showMiniGameFeedback("Bekle!", "Önce sabun kullanmalısın! 🧼", "var(--error)", "⚠️");
-
-                // Titreme
-                const dropZone = document.getElementById('hero-drop-zone');
-                dropZone.style.animation = 'eat-wobble 0.3s ease';
-                setTimeout(() => dropZone.style.animation = 'none', 300);
-            }
-        }
-        return;
-    }
-
-    // Özel Oyun Mantığı: Uyku (Hero -> Bed)
-    if (gameData.subType === 'sleep') {
-        if (info.element.dataset.id === 'hero-sleep') {
-            const dropZoneAvatar = document.querySelector('.hero-avatar-large');
-            activeMiniGame.energy = 100;
-            energyBar.style.width = '100%';
-            energyBar.style.backgroundColor = 'var(--success)';
-
-            // Yatakta uyuyan kahraman
-            dropZoneAvatar.innerHTML = `<span style="position:relative;">🛌<span style="position:absolute; top:-10px; right:0; font-size:1.5rem;">😴</span></span>`;
-
-            document.getElementById('feedback-continue-btn').classList.remove('hidden');
-            showMiniGameFeedback("İyi Uykular!", info.message, "var(--success)", "🌙", true);
-            info.element.style.display = 'none';
-
-            // Konfeti fırlat
-            const effect = document.createElement('div');
-            effect.className = 'food-effect anim-float-up';
-            effect.textContent = '✨';
-            effect.style.left = '50%';
-            effect.style.top = '50%';
-            document.getElementById('hero-drop-zone').appendChild(effect);
-            setTimeout(() => effect.remove(), 1000);
-
-        }
-        return;
-    }
-
-    if (info.isGood) {
-        // Doğru seçim
-        activeMiniGame.energy = 100;
-        energyBar.style.width = '100%';
-        energyBar.style.backgroundColor = 'var(--success)';
-
-        // Eğer oyuna özel bir successEmoji (Başarı emojisi) tanımlanmışsa (Maske, Paylaşma vs.)
-        if (activeMiniGame.gameData.successEmoji) {
-            const dropZoneAvatar = document.querySelector('.hero-avatar-large');
-            dropZoneAvatar.innerHTML = activeMiniGame.gameData.successEmoji;
-
-            // Konfeti fırlat
-            const effect = document.createElement('div');
-            effect.className = 'food-effect anim-float-up';
-            effect.textContent = activeMiniGame.gameData.successEffect || '🎉';
-            effect.style.left = '50%';
-            effect.style.top = '50%';
-            document.getElementById('hero-drop-zone').appendChild(effect);
-            setTimeout(() => effect.remove(), 1000);
-        }
-
-        const successTitle = activeMiniGame.gameData.successTitle || "Harika!";
-        const successIcon = activeMiniGame.gameData.successIcon || "✨";
-
-        document.getElementById('feedback-continue-btn').classList.remove('hidden');
-        showMiniGameFeedback(successTitle, info.message, "var(--success)", successIcon, true);
-        info.element.style.display = 'none'; // Sürüklenebilir öğeyi gizle
-
-
-    } else {
-        // Yanlış seçim
-        activeMiniGame.energy = Math.max(0, activeMiniGame.energy - 20);
-        energyBar.style.width = `${activeMiniGame.energy}%`;
-        energyBar.style.backgroundColor = 'var(--error)';
-
-        // Titreme efekti
-        const dropZone = document.getElementById('hero-drop-zone');
-        dropZone.style.animation = 'eat-wobble 0.3s ease';
-        setTimeout(() => dropZone.style.animation = 'none', 300);
-
-        showMiniGameFeedback("Dikkat!", info.message, "var(--error)", "⚠️");
-    }
-}
-
-function showMiniGameFeedback(title, message, color, icon, isFinal = false) {
-    const popup = document.getElementById('minigame-feedback');
-    const titleEl = document.getElementById('feedback-title');
-    const messageEl = document.getElementById('feedback-message');
-    const iconEl = document.getElementById('feedback-icon');
-
-    titleEl.textContent = title;
-    titleEl.style.color = color;
-    messageEl.textContent = message;
-    iconEl.textContent = icon;
-
-    popup.classList.remove('hidden');
-
-    // Eğer "Devam Et" butonu kapalıysa (yani oyun bitmediyse/ara adımsa)
-    // VEYA isFinal zorunlu olarak false ise otomatik kapat.
-    const continueBtn = document.getElementById('feedback-continue-btn');
-    if (!isFinal && continueBtn.classList.contains('hidden')) {
-        setTimeout(() => {
-            popup.classList.add('hidden');
-        }, 2000);
-    }
-}
-
-function feedPet() {
-    if (!globalCurrentModule) return;
-
-    const user = getActiveUser();
-    if (!user) return;
-
-    const petData = user.pets[globalCurrentModule];
-    if (petData.food <= 0 || petData.happiness >= 100) return;
-
-    petData.food -= 1;
-    petData.happiness += 20; // Each food gives 20% happiness
-    if (petData.happiness > 100) petData.happiness = 100;
-
-    updateUser(user);
-
-    // Trigger animations (Faz 6 Görsel Geribildirim)
-    const petEmoji = document.getElementById('pet-emoji');
-    if (petEmoji) {
-        petEmoji.classList.remove('pet-eat');
-        void petEmoji.offsetWidth; // Trigger reflow
-        petEmoji.classList.add('pet-eat');
-
-        // Uçuşan kalpler/yıldızlar efekti
-        const effect = document.createElement('div');
-        effect.textContent = ['💖', '✨', '😋', '🪄'][Math.floor(Math.random() * 4)];
-        effect.style.position = 'absolute';
-        effect.style.left = '50%';
-        effect.style.top = '0';
-        effect.style.fontSize = '2rem';
-        effect.style.pointerEvents = 'none';
-        effect.style.animation = 'float-up 1s ease-out forwards';
-
-        const wrapper = document.querySelector('.pet-avatar-wrapper');
-        if (wrapper) wrapper.appendChild(effect);
-        setTimeout(() => effect.remove(), 1000);
-    }
-    // Update UI immediately
-    document.getElementById('pet-food-amount').textContent = petData.food;
-    document.getElementById('pet-happiness-fill').style.width = `${petData.happiness}%`;
-
-    const statusEl = document.getElementById('pet-status');
-    if (petData.happiness > 50) {
-        statusEl.textContent = 'Mutlu! 🥰';
-    } else {
-        statusEl.textContent = 'Uyanık! 👀';
-    }
-
-    const feedBtn = document.getElementById('feed-pet-btn');
-    feedBtn.disabled = petData.food <= 0 || petData.happiness >= 100;
-
-    showToast('Harika! Dostunu besledin. 💖');
-}
-
-// ─── RENDER: PROFILE ────────────────────────────────────
-function renderProfile() {
-    const user = getActiveUser();
-    if (!user) { navigateTo('login'); return; }
-
-    document.getElementById('profile-avatar').textContent = user.avatar;
-    document.getElementById('profile-avatar').style.background = user.avatarBg;
-    document.getElementById('profile-displayname').textContent = user.displayName;
-    document.getElementById('profile-username').textContent = '@' + user.username;
-    document.getElementById('profile-bio').textContent = user.bio || 'Henüz bir bio eklenmedi.';
-    const age = calculateAge(user.birthDate);
-    document.getElementById('profile-stars').textContent = user.stars || 0;
-    document.getElementById('profile-age-group').textContent = age + ' Yaş';
-    document.getElementById('edit-bio').value = user.bio || '';
-
-    // Status
-    const statusEl = document.getElementById('my-status-text');
-    const statusInput = document.getElementById('my-status-input');
-    if (statusEl) statusEl.textContent = user.status || 'Bugün nasılsın?';
-    if (statusInput) statusInput.value = '';
-
-    // Streaks on profile
-    const myStreaks = document.getElementById('my-profile-streaks');
-    if (myStreaks && user.streaks) {
-        const s = user.streaks;
-        myStreaks.innerHTML = `
-            <div class="detail-streak-row">🥕 Beslenme <strong>${s.nutrition || 0} 🔥</strong></div>
-            <div class="detail-streak-row">💊 İlaç <strong>${s.medication || 0} 🔥</strong></div>
-            <div class="detail-streak-row">🏃 Aktivite <strong>${s.activity || 0} 🔥</strong></div>
-        `;
-    }
-}
-
-function saveStatus() {
-    const user = getActiveUser();
-    if (!user) return;
-    const input = document.getElementById('my-status-input');
-    const val = (input?.value || '').trim();
-    if (!val) { showToast('Bir şey yaz! 👋', 'error'); return; }
-    user.status = val;
-    updateUser(user);
-    const statusEl = document.getElementById('my-status-text');
-    if (statusEl) statusEl.textContent = val;
-    if (input) input.value = '';
-    showToast('Durumun güncellendi! 🌟', 'success');
-}
-
-// ─── RENDER: UPGRADE ──────────────────────────────────
-function renderUpgradeScreen() {
-    const user = getActiveUser();
-    if (!user) return;
-
-    document.getElementById('upgrade-stars').textContent = user.stars || 0;
-
-    // Update button states
-    document.querySelectorAll('.upgrade-btn').forEach(btn => {
-        if (user.stars < 5) {
-            btn.disabled = true;
-            btn.textContent = 'Yetersiz ⭐';
-        } else {
-            btn.disabled = false;
-            btn.textContent = '5 ⭐';
-        }
-    });
-
-    // Update screen-stats if needed
-}
-
-function upgradeStat(statType) {
-    const user = getActiveUser();
-    if (!user || user.stars < 5) return;
-
-    user.stars -= 5;
-    if (!user.stats) user.stats = { power: 1, speed: 1, intel: 1 };
-
-    user.stats[statType] = (user.stats[statType] || 1) + 1;
-
-    updateUser(user);
-    showToast(`${statType.toUpperCase()} Geliştirildi! 🚀`, 'success');
-    renderUpgradeScreen();
-}
-
-// ─── RENDER: COMMUNITY ───────────────────────────────
-function renderCommunity() {
-    const user = getActiveUser();
-    if (!user) { navigateTo('login'); return; }
-
-    const realUsers = getAllUsers();
-    const container = document.getElementById('community-list');
-    container.innerHTML = '';
-
-    // Combine sample + real users (exclude self)
-    const allProfiles = [
-        ...SAMPLE_HEROES,
-        ...realUsers.filter(u => u.id !== user.id)
-    ];
-
-    if (allProfiles.length === 0) {
-        container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🌱</div><p>Henüz başka kahraman yok.</p></div>`;
-        return;
-    }
-
-    allProfiles.forEach((u, i) => {
-        const card = document.createElement('div');
-        card.className = 'community-card anim-fade-up';
-        card.style.animationDelay = `${i * 0.08}s`;
-
-        const maxStreak = u.streaks ? Math.max(u.streaks.nutrition || 0, u.streaks.medication || 0, u.streaks.activity || 0) : 0;
-        const streakBadge = maxStreak >= 7 ? `<span class="cc-streak-badge">🔥 ${maxStreak} Gün</span>` : '';
-
-        const statusHtml = u.status
-            ? `<div class="cc-status">&ldquo;${u.status}&rdquo;</div>`
-            : '';
-
-        card.innerHTML = `
-            <div class="cc-avatar" style="background:${u.avatarBg}">${u.avatar}</div>
-            <div class="cc-name">${u.displayName} ${streakBadge}</div>
-            <div class="cc-username">@${u.username}</div>
-            ${statusHtml}
-        `;
-        card.onclick = () => showProfileDetail(u.id, u.isSample ? u : null);
-        container.appendChild(card);
-    });
-}
-
-// ─── RENDER: PROFILE DETAIL ──────────────────────────
-function showProfileDetail(userId, sampleData) {
-    // Use sample data directly, or find from localStorage
-    const profile = sampleData || getAllUsers().find(u => u.id === userId);
-    if (!profile) return;
-
-    document.getElementById('detail-avatar').textContent = profile.avatar;
-    document.getElementById('detail-avatar').style.background = profile.avatarBg;
-    document.getElementById('detail-displayname').textContent = profile.displayName;
-    document.getElementById('detail-username').textContent = '@' + profile.username;
-    document.getElementById('detail-bio').textContent = profile.bio || '';
-    const age = calculateAge(profile.birthDate);
-    document.getElementById('detail-stars').textContent = profile.stars || 0;
-    document.getElementById('detail-age-group').textContent = age + ' Yaş';
-    document.getElementById('detail-about').textContent = profile.bio || 'Bu kahraman henüz bir şey yazmamış.';
-
-    // Status
-    const statusEl = document.getElementById('detail-status-text');
-    if (statusEl) statusEl.textContent = profile.status || '';
-    const statusBox = document.getElementById('detail-status-box');
-    if (statusBox) statusBox.style.display = profile.status ? 'block' : 'none';
-
-    // Streaks
-    const detailStreaks = document.getElementById('detail-streaks');
-    if (detailStreaks && profile.streaks) {
-        const s = profile.streaks;
-        detailStreaks.innerHTML = `
-            <div class="detail-streak-row">
-                <span>🥕 Sağlıklı Beslenme</span>
-                <strong>${s.nutrition || 0} 🔥</strong>
-            </div>
-            <div class="detail-streak-row">
-                <span>💊 İlaç / Tedavi</span>
-                <strong>${s.medication || 0} 🔥</strong>
-            </div>
-            <div class="detail-streak-row">
-                <span>🏃 Sağlık Aktivitesi</span>
-                <strong>${s.activity || 0} 🔥</strong>
-            </div>
-        `;
-        detailStreaks.style.display = 'block';
-    }
-
-    navigateTo('profile-detail');
-}
-
-// ─── RENDER: ACADEMY (FAZ 3) ──────────────────────────
-let academyState = { currentMission: null, solvedCount: 0 };
-
-function renderAcademyScreen() {
-    const user = getActiveUser();
-    if (!user) return;
-    const sEl = document.getElementById('academy-stars');
-    if (sEl) sEl.textContent = user.stars || 0;
-
-    const today = new Date().toISOString().split('T')[0];
-    if (user.lastAcademyDay === today) {
-        const container = document.getElementById('game-container');
-        if (container) {
-            container.innerHTML = `
-        <div class="text-center">
-                    <h3>Harika iş çıkardın! 🌟</h3>
-                    <p>Bugünkü süper yakıtını aldın. Yarın yeni eğitimler için bekliyoruz!</p>
-                </div>
-        `;
-        }
-    }
-}
-
-function startDailyMission() {
-    const mission = academyMissions[Math.floor(Math.random() * academyMissions.length)];
-    academyState.currentMission = mission;
-    academyState.solvedCount = 0;
-
-    const container = document.getElementById('game-container');
-    if (!container) return;
-    container.innerHTML = `<h4>${mission.title}</h4> <p>${mission.description}</p>`;
-
-    if (mission.type === 'match') renderMatchGame(mission, container);
-    if (mission.type === 'fill') renderFillGame(mission, container);
-}
-
-function renderMatchGame(mission, container) {
-    const grid = document.createElement('div');
-    grid.className = 'match-grid';
-    const shuffledItems = [...mission.pairs].sort(() => Math.random() - 0.5);
-    const shuffledPowers = [...mission.pairs].sort(() => Math.random() - 0.5);
-    container.appendChild(grid);
-    let selectedItem = null;
-    shuffledItems.forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'match-item';
-        div.textContent = p.item;
-        div.onclick = () => {
-            document.querySelectorAll('.match-item').forEach(i => i.style.borderColor = '#ddd');
-            div.style.borderColor = 'var(--primary)';
-            selectedItem = p;
-        };
-        grid.appendChild(div);
-    });
-    shuffledPowers.forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'match-target';
-        div.textContent = p.power;
-        div.onclick = () => {
-            if (selectedItem && selectedItem.power === p.power) {
-                div.style.background = 'var(--success)';
-                div.style.color = '#fff';
-                div.textContent = '✅';
-                div.onclick = null;
-                academyState.solvedCount++;
-                if (academyState.solvedCount === mission.pairs.length) completeAcademyMission();
-            } else {
-                showToast('Tekrar dene kahraman!', 'info');
-            }
-        };
-        grid.appendChild(div);
-    });
-}
-
-function renderFillGame(mission, container) {
-    let html = mission.text;
-    Object.keys(mission.options).forEach(key => {
-        let select = `<select class="inline-select" onchange="checkFill(this, '${key}')">
-        <option value="">Seç...</option>
-            ${mission.options[key].map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-        </select>`;
-        html = html.replace(`[${key}]`, select);
-    });
-    const div = document.createElement('div');
-    div.className = 'fill-text';
-    div.innerHTML = html;
-    container.appendChild(div);
-}
-
-function checkFill(select, key) {
-    if (select.value === academyState.currentMission.correct[key]) {
-        select.style.borderColor = 'var(--success)';
-        select.disabled = true;
-        academyState.solvedCount++;
-        if (academyState.solvedCount === Object.keys(academyState.currentMission.correct).length) {
-            completeAcademyMission();
-        }
-    }
-}
-
-function completeAcademyMission() {
-    const user = getActiveUser();
-    user.stars += 5;
-    user.xp += 50;
-    user.lastAcademyDay = new Date().toISOString().split('T')[0];
-    updateUser(user);
-    const dialog = hospitalDialogs.launch[Math.floor(Math.random() * hospitalDialogs.launch.length)];
-    const docDial = document.getElementById('doctor-dialog');
-    if (docDial) docDial.textContent = dialog;
-    const reward = document.getElementById('academy-reward');
-    if (reward) reward.classList.remove('hidden');
-}
-
-function launchHero() {
-    document.getElementById('academy-reward').classList.add('hidden');
-    navigateTo('home');
+feedbackNextBtn.addEventListener('click', () => {
+    feedbackOverlay.style.transform = 'translateY(100%)';
     setTimeout(() => {
-        const hero = document.getElementById('main-hero');
-        if (hero) {
-            hero.classList.add('launching');
-            showToast('MAGERA EVİNDEN SÜPER UÇUŞ! 🚀', 'success');
-            setTimeout(() => {
-                hero.classList.remove('launching');
-                renderHome();
-            }, 1200);
+        feedbackOverlay.classList.add('hidden');
+
+        if (currentHearts <= 0) {
+            alert("Deneme hakkınız doldu. Bilgilerinizi tazeleyerek bu bölümü tekrar deneyebilirsiniz.");
+            showHome(currentUser.name);
+            return;
         }
-    }, 100);
+
+        currentQuestionIndex++;
+        updateProgress();
+
+        if (currentQuestionIndex >= quizQuestions.length) {
+            finishQuiz();
+        } else {
+            showQuestion();
+        }
+    }, 300);
+});
+
+function finishQuiz() {
+    const xpEarned = 10 + (currentHearts * 5); // Base 10 + 5 per heart
+    currentUser.xp += xpEarned;
+
+    if (!currentUser.completed.includes(activeModule.id)) {
+        currentUser.completed.push(activeModule.id);
+    }
+
+    saveState();
+
+    document.getElementById('earned-xp').textContent = `+${xpEarned}`;
+    screens.quiz.classList.remove('active');
+    screens.result.classList.add('active');
 }
 
-// ─── INIT ───────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    const activeUser = getActiveUser();
-    if (activeUser) {
-        navigateTo('home');
-    } else {
-        navigateTo('login');
-    }
+document.getElementById('finish-lesson-btn').addEventListener('click', () => {
+    showHome(currentUser.name);
 });

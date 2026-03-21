@@ -3,556 +3,175 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="description" content="Lösev Süper Kahramanım — Lösevli çocuklar için süper kahraman platformu">
-    <title>Lösev Süper Kahramanım 🦸</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LÖSEV - Eğitim ve Farkındalık Platformu</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
-    <!-- Animated Background -->
-    <div class="bg-animated"></div>
+    <div id="app">
+        <!-- Login & Registration Screen -->
+        <section id="auth-screen" class="screen active">
+            <div class="auth-container">
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
-
-    <div class="app-container">
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- 1. GİRİŞ (LOGIN) EKRANI               -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-login" class="auth-screen">
-            <h1 class="auth-title main-title">Lösev</h1>
-            <p class="auth-subtitle main-subtitle">Süper Kahramanım!</p>
-
-            <div class="auth-form">
-                <div class="glass-card">
-                    <div class="form-group">
-                        <label class="form-label" for="login-username">Kullanıcı Adı</label>
-                        <input class="form-input" type="text" id="login-username" placeholder="örn: kahraman42"
-                            autocomplete="username">
+                <header class="auth-header">
+                    <div class="logo-box">
+                        <img src="./losev_logo.png" alt="LÖSEV Logo" id="brand-logo">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" for="login-password">Şifre</label>
-                        <input class="form-input" type="password" id="login-password" placeholder="••••••"
-                            autocomplete="current-password">
-                    </div>
-                    <button class="btn btn-primary btn-block" onclick="doLogin()">Giriş Yap 🚀</button>
+                    <h2>Farkındalık Platformu</h2>
+                    <p>Öğren, bilinçlen, dayanışmaya katıl.</p>
+                </header>
+
+                <!-- Tabs (Login / Register) -->
+                <div class="auth-tabs" id="auth-tabs">
+                    <button class="tab-btn active" data-tab="login">Giriş Yap</button>
+                    <button class="tab-btn" data-tab="register">Kayıt Ol</button>
                 </div>
-            </div>
 
-            <button class="btn btn-ghost" onclick="navigateTo('register')" style="margin-top:16px">
-                Hesabın yok mu? Kayıt ol
-            </button>
-        </div>
+                <!-- Forms Container -->
+                <div class="forms-wrapper">
 
-        <!-- ════════════════════════════════════════ -->
-        <!-- 2. KAYIT (REGISTER) EKRANI             -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-register" class="auth-screen hidden">
-            <div class="auth-logo">🚀</div>
-            <h1 class="auth-title">Kayıt Ol</h1>
-            <p class="auth-subtitle">Süper kahramanını oluştur!</p>
-
-            <div class="auth-form">
-                <div class="glass-card">
-                    <div class="form-group">
-                        <label class="form-label" for="reg-displayname">Adın</label>
-                        <input class="form-input" type="text" id="reg-displayname" placeholder="Gerçek adın..."
-                            maxlength="20">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="reg-username">Kullanıcı Adı</label>
-                        <input class="form-input" type="text" id="reg-username" placeholder="Benzersiz bir ad seç..."
-                            maxlength="15" autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="reg-password">Şifre</label>
-                        <input class="form-input" type="password" id="reg-password" placeholder="En az 4 karakter"
-                            autocomplete="new-password">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="reg-birthdate">Doğum Tarihi</label>
-                        <input class="form-input" type="date" id="reg-birthdate">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Cinsiyet</label>
-                        <div class="gender-selection" style="display:flex; gap:10px;">
-                            <label class="gender-btn" style="flex:1; cursor:pointer;" onclick="selectRegGender('boy')">
-                                <input type="radio" name="reg-gender" value="boy" class="hidden" id="gender-boy">
-                                <div class="gender-box" id="box-boy"
-                                    style="padding:10px; border:2px solid #E8E8F0; border-radius:10px; text-align:center; font-size:1.5rem; transition:0.3s;">
-                                    🦸‍♂️</div>
-                            </label>
-                            <label class="gender-btn" style="flex:1; cursor:pointer;" onclick="selectRegGender('girl')">
-                                <input type="radio" name="reg-gender" value="girl" class="hidden" id="gender-girl">
-                                <div class="gender-box" id="box-girl"
-                                    style="padding:10px; border:2px solid #E8E8F0; border-radius:10px; text-align:center; font-size:1.5rem; transition:0.3s;">
-                                    🦸‍♀️</div>
-                            </label>
+                    <!-- Login Form -->
+                    <form id="login-form" class="auth-form active-form">
+                        <div class="input-group">
+                            <label for="login-email">E-posta Adresi</label>
+                            <input type="email" id="login-email" placeholder="ornek@eposta.com" required>
                         </div>
-                    </div>
-
-                    <button class="btn btn-success btn-block" onclick="doRegister()">Kaydet & Başla! 🌟</button>
-                </div>
-            </div>
-
-            <button class="btn btn-ghost" onclick="navigateTo('login')" style="margin-top:16px">
-                Zaten hesabın var mı? Giriş yap
-            </button>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- 3. ANA SAYFA (HOME)                     -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-home" class="hidden page-content">
-            <!-- Header -->
-            <div class="app-header">
-                <div class="header-greeting">
-                    <span>Merhaba 👋</span>
-                    <div id="home-displayname">Kahraman</div>
-                </div>
-                <div class="header-right" style="display:flex;gap:10px;align-items:center;">
-                    <button class="home-badge-btn" onclick="navigateTo('badges')" title="Rozetlerim">🏅</button>
-                    <div class="header-avatar" onclick="confirmResetData()">⚙️</div>
-                </div>
-            </div>
-
-            <!-- Mood Tracker (compact) -->
-            <div class="mood-tracker anim-fade-up" id="mood-tracker-section">
-                <div class="mood-label" id="mood-label-text">Bugün nasıl hissediyorsun? 💜</div>
-                <div class="mood-emojis" id="mood-emoji-row">
-                    <button class="mood-btn" onclick="selectMood(1, this)" title="Çok kötü">😢</button>
-                    <button class="mood-btn" onclick="selectMood(2, this)" title="Kötü">😕</button>
-                    <button class="mood-btn" onclick="selectMood(3, this)" title="Fena değil">😐</button>
-                    <button class="mood-btn" onclick="selectMood(4, this)" title="İyi">😊</button>
-                    <button class="mood-btn" onclick="selectMood(5, this)" title="Harika">🤩</button>
-                </div>
-            </div>
-
-            <!-- BIG Daily Mission Card (centerpiece) -->
-            <div id="daily-mission-section" class="anim-fade-up" style="animation-delay:0.1s">
-                <!-- JS ile doldurulacak -->
-            </div>
-
-            <!-- Doctor Appreciation (big button, below mission) -->
-            <div class="home-appreciate-row anim-fade-up" style="animation-delay:0.15s">
-                <button class="home-appreciate-btn" onclick="appreciateDoctor()">
-                    💙 Doktoruma & Hemşireme Teşekkür Et
-                </button>
-            </div>
-
-            <!-- Flower Garden (positive-only check-in tracker) -->
-            <div class="flower-garden-panel anim-fade-up" style="animation-delay:0.2s">
-                <div class="fg-header">
-                    <span class="fg-title">🌸 Çiçek Bahçem</span>
-                    <button class="fg-checkin-btn" id="fg-checkin-btn" onclick="openDailyCheckin()">Bugünü Ekle
-                        ✨</button>
-                </div>
-                <div class="fg-row" id="flower-garden-row">
-                    <!-- JS ile 7 çiçek render edilecek -->
-                </div>
-            </div>
-
-            <!-- Hero Hub (smaller, at bottom — access to modules) -->
-            <div class="home-modules-strip anim-fade-up" style="animation-delay:0.25s">
-                <div class="hms-label">🗺️ Görev Haritam</div>
-                <div class="hero-hub-container hero-hub-compact">
-                    <div class="central-hero" id="main-hero" onclick="navigateTo('hero-upgrade')">🦸</div>
-                    <div id="hub-modules-wrapper"></div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- Y. KAHRAMAN GELİŞİM EKRANI              -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-hero-upgrade" class="hidden page-content">
-            <div class="app-header">
-                <button class="back-btn-simple" onclick="navigateTo('home')">←</button>
-                <div class="header-greeting">
-                    <span>Kahraman</span>
-                    <div>Gelişimi 🌟</div>
-                </div>
-                <div class="star-badge">
-                    ⭐ <span id="upgrade-stars">0</span>
-                </div>
-            </div>
-
-            <div class="module-body">
-                <div class="glass-card anim-fade-up">
-                    <div class="profile-avatar-large" style="margin: 0 auto 16px; background: var(--bg-light)">🦸</div>
-                    <p style="text-align:center; font-weight:800; color:var(--text-secondary)">
-                        Yıldızlarını kullanarak özelliklerini geliştirebilirsin!
-                    </p>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- Y. KAHRAMAN AKADEMİSİ (HASTANE GÖREVLERİ) -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-academy" class="hidden page-content">
-            <div class="app-header">
-                <button class="back-btn-simple" onclick="navigateTo('home')">←</button>
-                <div class="header-greeting">
-                    <span>Süper</span>
-                    <div>Macera Evi 🏚️✨</div>
-                </div>
-                <div class="star-badge">
-                    ⭐ <span id="academy-stars">0</span>
-                </div>
-            </div>
-
-            <div class="module-body">
-                <div class="doctor-panel anim-fade-up">
-                    <div class="doctor-avatar">👨‍⚕️</div>
-                    <div class="doctor-bubble" id="doctor-dialog">
-                        "Hoş geldin Kahraman! Bugün süper yakıtını doldurmaya hazır mısın?"
-                    </div>
-                </div>
-
-                <div id="game-container" class="game-container glass-card anim-fade-up">
-                    <!-- Oyun içeriği buraya gelecek (Eşleştirme/Boşluk) -->
-                    <div class="game-welcome">
-                        <h3>Günün Eğitimi</h3>
-                        <p>Hastanede yeni bir şey öğrenmeye hazır mısın?</p>
-                        <button class="primary-btn" onclick="startDailyMission()">Eğitimi Başlat!</button>
-                    </div>
-                </div>
-
-                <div id="academy-reward" class="hidden anim-pop">
-                    <div class="reward-content">
-                        <h2>Süper Yakıt Yüklendi! 🚀</h2>
-                        <div class="reward-stars">⭐ +5</div>
-                        <p>Doktorun sana süper güç verdi!</p>
-                        <button class="secondary-btn" onclick="launchHero()">ŞİMDİ UÇ! 🚀</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- Y. ETKİLEŞİMLİ MİNİ OYUN EKRANI (Faz 7) -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-minigame" class="hidden page-content minigame-bg">
-            <div class="app-header-simple">
-                <button class="back-btn-simple" onclick="closeMiniGame()">← Çık</button>
-                <div class="header-greeting" style="flex:1; text-align:center;">
-                    <h2 id="minigame-title" style="margin:0; font-size:1.2rem;">Oyun</h2>
-                </div>
-            </div>
-
-            <div class="minigame-arena">
-                <!-- Kahraman / Bırakma Alanı -->
-                <div class="hero-dropzone-container">
-                    <h3 id="minigame-instruction">Kahramanı Besle!</h3>
-
-                    <!-- Enerji Barı -->
-                    <div class="hero-energy-bar-wrapper">
-                        <div class="hero-energy-fill" id="minigame-energy"></div>
-                    </div>
-
-                    <div class="drop-zone" id="hero-drop-zone">
-                        <div class="hero-avatar-large">🚀</div>
-                        <div class="drop-zone-overlay">Buraya Bırak</div>
-                    </div>
-                </div>
-
-                <!-- Sürükleme İpucu -->
-                <div class="drag-hint-animation" id="drag-hint" style="display:none;">
-                    👆
-                </div>
-
-                <!-- Sürüklenecek Eşyalar (Su, Kola vs) -->
-                <div class="drag-items-container" id="draggable-items-container">
-                    <!-- JS tarafından doldurulacak -->
-                </div>
-            </div>
-
-            <!-- Geri Bildirim Pop-up (Doğru/Yanlış) -->
-            <div id="minigame-feedback" class="feedback-popup hidden">
-                <div class="feedback-icon" id="feedback-icon">✨</div>
-                <h3 id="feedback-title">Harika!</h3>
-                <p id="feedback-message">Açıklama metni.</p>
-                <button class="primary-btn hidden" id="feedback-continue-btn" onclick="continueMiniGame()">Devam
-                    Et</button>
-            </div>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- X. MODÜL İÇERİK EKRANI (Ayrıntı)        -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-module-detail" class="hidden page-content">
-            <div class="module-header" id="module-detail-header">
-                <button class="back-btn-simple" onclick="navigateTo('home')">←</button>
-                <div class="module-title-group">
-                    <h2 id="module-detail-title">Modül Başlığı</h2>
-                    <p id="module-detail-desc">Modül açıklaması burada yer alacak.</p>
-                </div>
-                <div class="module-icon-large" id="module-detail-icon">🤝</div>
-            </div>
-
-            <div class="module-body">
-                <!-- Hayvan Dostu Paneli -->
-                <div class="pet-panel glass-card anim-fade-up" id="pet-panel-ui">
-                    <div class="pet-avatar-wrapper">
-                        <div class="pet-avatar" id="pet-emoji">🐶</div>
-                        <div class="pet-status-bubble" id="pet-status">Zzz...</div>
-                    </div>
-                    <div class="pet-info">
-                        <h3 id="pet-name">Zeytin</h3>
-                        <div class="pet-happiness-wrapper">
-                            <div class="pet-happiness-bar">
-                                <div class="pet-happiness-fill" id="pet-happiness-fill" style="width: 0%"></div>
-                            </div>
-                            <div class="pet-food-count">
-                                <span id="pet-food-icon">🦴</span> <span id="pet-food-amount">0</span>
-                            </div>
+                        <div class="input-group">
+                            <label for="login-password">Şifre</label>
+                            <input type="password" id="login-password" placeholder="••••••••" required>
                         </div>
-                    </div>
-                    <button class="feed-btn" id="feed-pet-btn" onclick="feedPet()">Yedir</button>
-                </div>
+                        <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
+                    </form>
 
-                <!-- Kahraman Sağlık Paneli (İyileşme Evim - Faz 8) -->
-                <div class="pet-panel glass-card anim-fade-up hidden" id="hero-panel-ui">
-                    <div class="pet-avatar-wrapper">
-                        <div class="pet-avatar" id="hero-panel-emoji">🦸‍♂️</div>
-                        <div class="pet-status-bubble" id="hero-panel-status">Harika!</div>
-                    </div>
-                    <div class="pet-info">
-                        <h3 id="hero-panel-name">Kahraman</h3>
-                        <div class="pet-happiness-wrapper">
-                            <div class="pet-happiness-bar">
-                                <div class="pet-happiness-fill" id="hero-health-fill"
-                                    style="width: 100%; background: var(--success); box-shadow: 0 0 10px var(--success);">
-                                </div>
-                            </div>
-                            <div class="pet-food-count">
-                                <span style="font-size:0.8rem; color:var(--text-secondary);">Öğrenim Durumu</span>
-                            </div>
+                    <!-- Registration Form -->
+                    <form id="register-form" class="auth-form">
+                        <div class="input-group">
+                            <label for="reg-name">Adınız Soyadınız</label>
+                            <input type="text" id="reg-name" placeholder="Adınız Soyadınız" required>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Level Haritası (Kıvrımlı Yol) -->
-                <div class="level-map-container" id="level-map-container">
-                    <!-- Seviyeler JS ile oluşturulacak -->
-                </div>
-            </div>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- 4. PROFİLİM                             -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-profile" class="hidden page-content">
-            <div class="profile-hero">
-                <div class="profile-avatar-large" id="profile-avatar" style="background:#D6E4FF">🦸</div>
-                <div class="profile-name" id="profile-displayname">Kahraman</div>
-                <div class="profile-username" id="profile-username">@kahraman</div>
-                <div class="profile-bio" id="profile-bio">Henüz bir bio eklenmedi.</div>
-                <div class="profile-stats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="profile-stars">0</div>
-                        <div class="stat-label">Yıldız</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="profile-age-group">—</div>
-                        <div class="stat-label">Yaş Grubu</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Durum Güncelleme -->
-            <div class="info-card edit-section">
-                <h3>💬 Durum Güncelle</h3>
-                <div class="my-status-display" id="my-status-text">Bugün nasılsın?</div>
-                <input class="form-input" type="text" id="my-status-input" placeholder="Örn: Bugün elma yedim! 🍎"
-                    maxlength="100" style="margin-top:10px;">
-                <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="saveStatus()">Paylaş
-                    🌟</button>
-            </div>
-
-            <!-- Streak Özeti -->
-            <div class="info-card" id="my-profile-streaks-card">
-                <h3>🔥 Seri Özetim</h3>
-                <div id="my-profile-streaks"></div>
-            </div>
-
-            <!-- Bio Düzenleme -->
-            <div class="info-card edit-section">
-                <h3>✏️ Bio Düzenle</h3>
-                <input class="form-input" type="text" id="edit-bio" placeholder="Kendin hakkında bir şey yaz..."
-                    maxlength="60">
-                <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveBio()">Kaydet</button>
-            </div>
-
-            <button class="btn btn-ghost btn-block" onclick="doLogout()"
-                style="color:var(--danger);text-decoration:none;margin-top:8px">
-                🚨 Çıkış Yap
-            </button>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- ROZETLER EKRANı                         -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-badges" class="hidden page-content">
-            <div class="app-header">
-                <button class="back-btn-simple" onclick="navigateTo('home')">←</button>
-                <div class="header-greeting">
-                    <span>Kahraman</span>
-                    <div>Rozetlerim 🏅</div>
-                </div>
-            </div>
-            <div class="module-body" id="badges-body">
-                <!-- JS ile doldurulacak -->
-            </div>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- 5. TOPLULUK                             -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-community" class="hidden page-content">
-            <div class="community-header">
-                <h2>🌍 Topluluk</h2>
-                <p>Diğer süper kahramanlarla tanış!</p>
-            </div>
-            <div class="community-grid" id="community-list">
-                <!-- JS ile doldurulacak -->
-            </div>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- 6. PROFİL DETAY (Başkasının profili)    -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="screen-profile-detail" class="hidden profile-detail-screen">
-            <button class="back-btn" onclick="navigateTo('community')">← Geri</button>
-
-            <div class="profile-hero">
-                <div class="profile-avatar-large" id="detail-avatar" style="background:#D6E4FF">🦸</div>
-                <div class="profile-name" id="detail-displayname">Kahraman</div>
-                <div class="profile-username" id="detail-username">@kahraman</div>
-                <div class="profile-bio" id="detail-bio"></div>
-                <div class="profile-stats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="detail-stars">0</div>
-                        <div class="stat-label">Yıldız</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="detail-age-group">—</div>
-                        <div class="stat-label">Yaş Grubu</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kahramanın Durumu -->
-            <div class="info-card" id="detail-status-box" style="display:none;">
-                <h3>💬 Bugünkü Durum</h3>
-                <div class="profile-status-bubble" id="detail-status-text"></div>
-            </div>
-
-            <!-- Streakler -->
-            <div class="info-card" id="detail-streaks" style="display:none;">
-                <h3>🔥 Günlük Seri</h3>
-            </div>
-
-            <div class="info-card">
-                <h3>Hakkında</h3>
-                <p id="detail-about">Bu kahraman henüz bir şey yazmamış.</p>
-            </div>
-        </div>
-
-        <!-- ════════════════════════════════════════ -->
-        <!-- GÜNLÜK CHECK-İN MODAL                   -->
-        <!-- ════════════════════════════════════════ -->
-        <div id="checkin-modal" class="checkin-overlay hidden">
-            <div class="checkin-card">
-                <div class="checkin-header">
-                    <div class="checkin-logo">✨</div>
-                    <h2>Bugünün Raporu</h2>
-                    <p id="checkin-step-label">Adım 1 / 3</p>
-                </div>
-
-                <!-- Step 1: Beslenme -->
-                <div class="checkin-step" id="checkin-step-1">
-                    <div class="checkin-question">🥗 Bugün sağlıklı bir şey yedin mi?</div>
-                    <div class="checkin-options">
-                        <button class="checkin-opt" onclick="selectCheckinAnswer('nutrition', 'yes', this)">😋 Evet,
-                            yedim!</button>
-                        <button class="checkin-opt" onclick="selectCheckinAnswer('nutrition', 'no', this)">😅 Bugün
-                            yapmadım</button>
-                    </div>
-                    <div class="checkin-sub" id="nutrition-sub" style="display:none">
-                        <p style="font-size:0.85rem;margin-bottom:8px;color:var(--text-secondary);">Ne yedin?
-                            (Seçebilirsin)</p>
-                        <div class="checkin-chips">
-                            <button class="checkin-chip" onclick="toggleChip(this)">🥦 Sebze</button>
-                            <button class="checkin-chip" onclick="toggleChip(this)">🍎 Meyve</button>
-                            <button class="checkin-chip" onclick="toggleChip(this)">🍲 Çorba</button>
-                            <button class="checkin-chip" onclick="toggleChip(this)">🥛 Süt</button>
-                            <button class="checkin-chip" onclick="toggleChip(this)">🐟 Balık</button>
+                        <div class="input-group">
+                            <label for="reg-email">E-posta Adresi</label>
+                            <input type="email" id="reg-email" placeholder="ornek@eposta.com" required>
                         </div>
-                    </div>
-                    <button class="checkin-next-btn" onclick="nextCheckinStep(1)">Devam →</button>
+                        <div class="input-group">
+                            <label for="reg-password">Şifre</label>
+                            <input type="password" id="reg-password" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Hesap Oluştur</button>
+                    </form>
+
                 </div>
 
-                <!-- Step 2: İlaç -->
-                <div class="checkin-step hidden" id="checkin-step-2">
-                    <div class="checkin-question">💊 Bugün ilaçlarını / tedavini aldın mı?</div>
-                    <div class="checkin-options">
-                        <button class="checkin-opt" onclick="selectCheckinAnswer('medication', 'yes', this)">💪 Evet,
-                            aldım!</button>
-                        <button class="checkin-opt" onclick="selectCheckinAnswer('medication', 'no', this)">😔 Bugün
-                            alamadım</button>
-                    </div>
+                <div class="divider">
+                    <span>VEYA</span>
+                </div>
+
+                <button id="guest-btn" class="btn btn-outline btn-block">Misafir Olarak Dene</button>
+
+            </div>
+        </section>
+
+        <!-- Main Educational Dashboard / Map -->
+        <section id="home-screen" class="screen">
+            <!-- App Header -->
+            <header class="app-header"
+                style="display:flex; justify-content:space-between; padding:20px; border-bottom:1px solid #eee; background:white; position:sticky; top:0; z-index:10;">
+                <div class="user-greeting" style="display:flex; align-items:center; gap:10px;">
                     <div
-                        style="background:rgba(108,99,255,0.1);border-radius:12px;padding:10px;margin-top:12px;font-size:0.85rem;color:#6C63FF;">
-                        💡 <strong>İpucu:</strong> İlaçlarını düzzenli almak süper güçlerin için çok önemli!
+                        style="width:50px; height:50px; border-radius:50%; background:#fffbdf; border:2px solid #facc15; display:flex; justify-content:center; align-items:center; overflow:hidden; box-shadow: 0 0 10px rgba(250,204,21,0.5);">
+                        <img src="./umut.png" alt="Umut" style="width:100%; height:100%; object-fit:cover;"
+                            onerror="this.style.display='none'; this.parentElement.innerText='💡'">
                     </div>
-                    <button class="checkin-next-btn" onclick="nextCheckinStep(2)">Devam →</button>
+                    <div>
+                        <small style="color:#666;">Hoş Geldin,</small>
+                        <h3 id="welcome-message" style="color:#f26522; font-size:1.1rem; margin:0;">Öğrenci</h3>
+                    </div>
                 </div>
+                <!-- Gamification Stats -->
+                <div class="user-stats" style="display:flex; gap:15px; font-weight:bold;">
+                    <div class="stat-badge streak" style="color:#f26522;">
+                        <span>🔥</span> <span id="streak-count">1</span>
+                    </div>
+                    <div class="stat-badge xp" style="color:#facc15;">
+                        <span>⭐</span> <span id="xp-count">0</span>
+                    </div>
+                </div>
+            </header>
 
-                <!-- Step 3: Aktivite -->
-                <div class="checkin-step hidden" id="checkin-step-3">
-                    <div class="checkin-question">🏃 Bugün sağlığın için ne yaptın?</div>
-                    <div class="checkin-options">
-                        <button class="checkin-opt" onclick="selectCheckinAnswer('activity', 'yes', this)">⭐ Bir şeyler
-                            yaptım!</button>
-                        <button class="checkin-opt" onclick="selectCheckinAnswer('activity', 'no', this)">😴 Bugün
-                            dinlendim</button>
-                    </div>
-                    <div class="checkin-chips" id="activity-chips">
-                        <button class="checkin-chip" onclick="toggleChip(this)">🚶 Yürüydüm</button>
-                        <button class="checkin-chip" onclick="toggleChip(this)">💤 İyi uyudum</button>
-                        <button class="checkin-chip" onclick="toggleChip(this)">🎨 Resim yaptım</button>
-                        <button class="checkin-chip" onclick="toggleChip(this)">📚 Kitap okudum</button>
-                        <button class="checkin-chip" onclick="toggleChip(this)">🎵 Müzik dinledim</button>
-                        <button class="checkin-chip" onclick="toggleChip(this)">🧘 Nefes egzersizi</button>
-                    </div>
-                    <button class="checkin-next-btn" onclick="submitCheckin()"
-                        style="background:linear-gradient(135deg,#F093FB,#F5576C);">🎉 Günü Tamamla!</button>
+            <!-- Learning Map / Path -->
+            <main class="learning-map" id="learning-map"
+                style="flex:1; padding:30px 20px 80px; position:relative; display:flex; flex-direction:column; align-items:center; gap:40px;">
+                <!-- Modules injected by JS -->
+            </main>
+
+            <!-- Bottom Nav -->
+            <nav class="bottom-nav"
+                style="position:fixed; bottom:0; padding-bottom:50px; background:white; display:flex; justify-content:space-around; padding:15px 0; border-top:1px solid #eee; z-index:10; width:100%; max-width:440px;">
+                <button class="nav-btn active"
+                    style="border:none; background:none; color:#f26522; display:flex; flex-direction:column; align-items:center;">
+                    <span style="font-size:1.3rem;">🗺️</span> Harita
+                </button>
+                <button class="nav-btn"
+                    style="border:none; background:none; color:#aaa; display:flex; flex-direction:column; align-items:center;"
+                    id="logout-btn">
+                    <span style="font-size:1.3rem;">🚪</span> Çıkış
+                </button>
+            </nav>
+        </section>
+
+        <!-- Quiz Screen -->
+        <section id="quiz-screen" class="screen bg-white" style="background:#fff;">
+            <header class="quiz-header" style="display:flex; align-items:center; padding:20px; gap:15px;">
+                <button id="quit-quiz"
+                    style="border:none; background:none; font-size:1.5rem; cursor:pointer; color:#aaa;">❌</button>
+                <div style="flex:1; height:12px; background:#f4f7fa; border-radius:6px; overflow:hidden;">
+                    <div id="quiz-progress" style="width:0%; height:100%; background:#f26522; transition:0.3s;"></div>
+                </div>
+                <div style="font-weight:bold; color:#ef4444;">❤️ <span id="heart-count">3</span></div>
+            </header>
+            <main style="flex:1; padding:20px; display:flex; flex-direction:column; justify-content:center;">
+                <h2 id="question-text" style="font-size:1.4rem; margin-bottom:30px; line-height:1.4;">Soru...</h2>
+                <div id="options-container" style="display:flex; flex-direction:column; gap:15px;"></div>
+            </main>
+            <footer style="padding:20px; border-top:1px solid #eee;">
+                <button id="check-answer-btn" class="btn btn-primary btn-block" disabled>Kontrol Et</button>
+            </footer>
+        </section>
+
+        <!-- Result Screen -->
+        <section id="result-screen" class="screen bg-white"
+            style="background:#fff; justify-content:center; align-items:center; text-align:center; padding:30px;">
+            <div
+                style="width:150px; height:150px; margin:0 auto 20px; filter: drop-shadow(0 0 30px rgba(250,204,21,0.6));">
+                <img src="./umut.png" alt="Umut Parlıyor"
+                    style="width:100%; height:100%; object-fit:contain; animation: mascotFloat 3s ease-in-out infinite;"
+                    onerror="this.style.display='none'; this.parentElement.innerText='💡'; this.parentElement.style.fontSize='5rem';">
+            </div>
+            <h1 style="color:#10b981; margin-bottom:10px;">Bölüm Tamamlandı!</h1>
+            <p style="color:#666; margin-bottom:30px;">Doğrulanmış Bilgi Kalkanını Güçlendirdin.</p>
+            <div style="padding:15px 30px; border:2px solid #facc15; border-radius:12px; margin-bottom:40px;">
+                <div style="color:#aaa; font-weight:bold; font-size:0.8rem;">KAZANILAN XP</div>
+                <div id="earned-xp" style="color:#facc15; font-size:2rem; font-weight:800;">+15</div>
+            </div>
+            <button id="finish-lesson-btn" class="btn btn-primary btn-block">Haritaya Dön</button>
+        </section>
+
+        <!-- Feedback Overlay -->
+        <div id="feedback-overlay"
+            style="position:absolute; bottom:0; left:0; width:100%; padding:30px 20px; display:flex; flex-direction:column; gap:20px; border-radius:20px 20px 0 0; transform:translateY(100%); transition:0.3s; z-index:50;">
+            <div style="display:flex; align-items:flex-start; gap:15px;">
+                <img src="./umut.png"
+                    style="width:60px; height:60px; object-fit:contain; filter: drop-shadow(0 0 10px rgba(250,204,21,0.4));"
+                    onerror="this.style.display='none';">
+                <div>
+                    <h3 id="feedback-title" style="font-size:1.4rem; font-weight:bold; margin-bottom:8px;"></h3>
+                    <p id="feedback-message" style="color:#444; line-height:1.4;"></p>
                 </div>
             </div>
+            <button id="feedback-next-btn" class="btn btn-primary btn-block">Devam Et</button>
         </div>
-
-        <!-- NAV BAR -->
-        <!-- ════════════════════════════════════════ -->
-        <nav class="navbar hidden" id="main-navbar">
-            <button class="nav-item active" data-screen="home" onclick="navigateTo('home')">
-                <span class="nav-icon">🏠</span>
-                Ana Sayfa
-            </button>
-            <button class="nav-item" data-screen="community" onclick="navigateTo('community')">
-                <span class="nav-icon">🌍</span>
-                Topluluk
-            </button>
-            <button class="nav-item" data-screen="profile" onclick="navigateTo('profile')">
-                <span class="nav-icon" id="navbar-profile-icon">👦</span>
-                Profil
-            </button>
-        </nav>
 
     </div>
 
