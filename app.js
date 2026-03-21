@@ -224,20 +224,27 @@ function showQuestion() {
 }
 
 function selectOption(index, btnNode) {
+    if (document.querySelector('.quiz-option.evaluated')) return; // Prevent double clicks
+
+    document.querySelectorAll('.quiz-option').forEach(b => {
+        b.classList.add('evaluated');
+        b.classList.remove('selected');
+    });
+
     selectedOptionIndex = index;
-    document.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected'));
     btnNode.classList.add('selected');
-    checkAnswerBtn.disabled = false;
+
+    evaluateAnswer(); // Immediately evaluate
 }
 
 checkAnswerBtn.addEventListener('click', evaluateAnswer);
 
 function evaluateAnswer() {
     if (selectedOptionIndex === null) return;
-    checkAnswerBtn.disabled = true;
 
     const q = quizQuestions[currentQuestionIndex];
     const opt = q.options[selectedOptionIndex];
+    const selectedBtn = document.querySelectorAll('.quiz-option')[selectedOptionIndex];
 
     feedbackOverlay.classList.remove('hidden', 'correct', 'wrong');
     feedbackOverlay.style.transform = 'translateY(0)';
@@ -246,6 +253,7 @@ function evaluateAnswer() {
     if (centerPopup) centerPopup.style.display = 'none';
 
     if (opt.isCorrect) {
+        selectedBtn.classList.add('correct-anim');
         feedbackOverlay.classList.add('correct');
         feedbackTitle.textContent = "Doğrulandı ✅";
 
@@ -260,9 +268,15 @@ function evaluateAnswer() {
             }, 1500);
         }
     } else {
+        selectedBtn.classList.add('wrong-anim');
         feedbackOverlay.classList.add('wrong');
         feedbackTitle.textContent = "Hatalı Bilgi ❌";
         currentHearts--;
+
+        // Yanlış seçeneğin tekrar eski rengine dönmesi
+        setTimeout(() => {
+            selectedBtn.classList.remove('wrong-anim');
+        }, 1000);
         heartCount.textContent = currentHearts;
     }
 

@@ -349,6 +349,61 @@ body {
     color: #3b82f6;
 }
 
+/* Button Validation Animations */
+.quiz-option.correct-anim {
+    border-color: #10b981 !important;
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+    animation: bounceSuccess 0.5s ease;
+}
+
+.quiz-option.correct-anim .quiz-opt-num {
+    color: #10b981 !important;
+}
+
+.quiz-option.wrong-anim {
+    border-color: #ef4444 !important;
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    animation: shakeError 0.4s ease;
+}
+
+.quiz-option.wrong-anim .quiz-opt-num {
+    color: #ef4444 !important;
+}
+
+@keyframes bounceSuccess {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes shakeError {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-8px);
+    }
+
+    50% {
+        transform: translateX(8px);
+    }
+
+    75% {
+        transform: translateX(-8px);
+    }
+}
+
 .feedback-overlay.correct {
     background-color: #dcfce7;
 }
