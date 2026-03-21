@@ -26,13 +26,15 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
 }
 
 #app {
     width: 100%;
     max-width: 440px;
-    height: 100vh;
+    height: 100dvh;
+    min-height: 100dvh;
     background-color: var(--surface);
     position: relative;
     box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
@@ -44,6 +46,7 @@ body {
 @media (min-width: 480px) {
     #app {
         height: 85vh;
+        min-height: 85vh;
         border-radius: 20px;
         overflow: hidden;
     }
